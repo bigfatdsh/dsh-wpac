@@ -26,7 +26,8 @@ dsh-wpac/
 ├── cordis.patch.yml       # 唯一入口：insert 一行 preset-wpac
 ├── skills/wpac/SKILL.md   # 深度手册（判定表/选项库/约束清单/模板/例句/评分表）
 ├── templates/profile.md   # 长期设定模板（可选，复制到工作区 wpac/profile.md）
-├── scripts/verify.mjs     # 装前自检
+├── scripts/verify.mjs     # 装前自检（19 项）
+├── tests/behavior.md      # 行为回归场景（改人格段后照着跑）
 ├── CHANGELOG.md           # 版本与改动
 ├── LICENSE                # MIT
 └── README.md
