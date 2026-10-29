@@ -231,8 +231,17 @@ if (fs.existsSync(path.join(root, 'LICENSE')) && !read('LICENSE').includes('姜�
 if (fs.existsSync(path.join(root, 'templates', 'profile.md'))) ok('长期设定模板存在');
 else bad('缺少 templates/profile.md');
 const installedSkill = path.join(process.env.DSH_HOME || path.join(process.env.HOME || '', '.dsh'), 'skills', 'wpac', 'SKILL.md');
-if (fs.existsSync(installedSkill)) ok(`技能已装进默认根目录：${installedSkill}`);
-else bad(`技能还没装进默认根目录（跑 node scripts/install-skill.mjs）：${installedSkill}`);
+if (!fs.existsSync(installedSkill)) {
+  bad(`技能还没装进默认根目录（跑 node scripts/install-skill.mjs）：${installedSkill}`);
+} else {
+  const src = fs.readFileSync(path.join(root, 'skills', 'wpac', 'SKILL.md'));
+  const deployed = fs.readFileSync(installedSkill);
+  if (!src.equals(deployed)) {
+    bad(`已安装的技能与源码不一致（跑 node scripts/install-skill.mjs）：${installedSkill}`);
+  } else {
+    ok(`技能已装且与源码逐字节一致：${installedSkill}`);
+  }
+}
 
 // ---- 5. 与现有预设不重名 ---------------------------------------------------
 const profileCordis = path.join(profileDir, 'cordis.yml');
