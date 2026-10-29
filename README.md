@@ -26,7 +26,9 @@ dsh-wpac/
 ├── cordis.patch.yml       # 唯一入口：insert 一行 preset-wpac
 ├── skills/wpac/SKILL.md   # 深度手册（判定表/选项库/约束清单/模板/例句/评分表）
 ├── templates/profile.md   # 长期设定模板（可选，复制到工作区 wpac/profile.md）
-├── scripts/verify.mjs     # 装前自检（19 项）
+├── scripts/verify.mjs     # 装前自检
+├── scripts/install-skill.mjs  # 把 skills/wpac 装进 ~/.dsh/skills/wpac
+├── scripts/publish-github.mjs # 推到 GitHub
 ├── tests/behavior.md      # 行为回归场景（改人格段后照着跑）
 ├── CHANGELOG.md           # 版本与改动
 ├── LICENSE                # MIT
@@ -75,6 +77,25 @@ node scripts/publish-github.mjs             # 推到 bigfatdsh/dsh-wpac
 
 走 `api.github.com`（本机 `github.com:22` 不通），token 取 macOS 钥匙串，不落文件；
 按远端 sha 比对，只推变化的文件。仓库不存在时脚本会先建（public）。
+
+## 看不到预设？
+
+先分清两件事：**预设是"新建会话时选的模式"，不是"当前会话里能切换的开关"**。
+已经开着的会话固定用创建时那个预设，标题旁边显示的就是它。
+
+按顺序排查：
+
+1. 新建会话 → 模式列表 → **自定义**分组，WPAC 应排在第一张卡（`order: 0`）。
+2. 还是没有：⌘R 重载窗口，或退出重开 App（预设声明来自 bundle 层，界面只在新会话时读一次名册）。
+3. 命令行核对：
+   ```bash
+   node scripts/verify.mjs                      # 声明/人格/技能是否完整
+   ```
+   再看 `plugin_manager` 的 `list_plugins`，`preset-wpac` 应为 `enabled: true`、`fiberPhase: active`。
+4. 都正常但还是不显示 → 多半是界面缓存，重开 App 即可。
+
+即便预设暂时选不到，也还能用：技能已装进 `~/.dsh/skills/wpac`，
+任何会话里说「用 wpac」或直接 `skill wpac` 就能加载同一套手册。
 
 ## 卸载 / 停用
 
