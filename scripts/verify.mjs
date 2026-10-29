@@ -69,11 +69,12 @@ if (!YAML) {
 
 // ---- 3. 预设声明 ----------------------------------------------------------
 if (patch) {
-  if (!Array.isArray(patch) || patch.length !== 1 || !Array.isArray(patch[0]?.insert)) {
-    bad('顶层必须是只含一条 insert 的数组（不要改动宿主行）');
+  if (!Array.isArray(patch) || patch.length < 1 || patch.some((entry) => !Array.isArray(entry?.insert))) {
+    bad('补丁层必须是只含 insert 的数组（不得覆盖宿主行）');
   } else {
-    ok('顶层结构：单条 insert');
-    const row = patch[0].insert.find((r) => r.id === 'preset-wpac');
+    ok(`顶层结构：${patch.length} 条 insert，全部只做新增`);
+    const allRows = patch.flatMap((entry) => entry.insert);
+    const row = allRows.find((r) => r.id === 'preset-wpac');
     if (!row) bad('缺少 id: preset-wpac 的行');
     else {
       ok('行 id：preset-wpac');
@@ -92,17 +93,34 @@ if (patch) {
       const dup = ids.filter((id, i) => ids.indexOf(id) !== i);
       if (dup.length) bad(`插件 id 重复：${dup.join(', ')}`);
       else ok('插件 id 无重复');
-      for (const required of ['persona', 'tool-fs', 'tool-ask-user', 'tool-todo', 'tool-web', 'tool-skill', 'present']) {
+      for (const required of ['tool-fs', 'tool-ask-user', 'tool-todo', 'tool-web', 'tool-skill', 'present']) {
         if (!ids.includes(required)) bad(`缺少必需插件行：${required}`);
       }
-      const persona = (cfg.plugins || []).find((p) => p.id === 'persona');
-      const prefix = persona?.config?.prefix || '';
-      if (prefix.length < 800) bad('persona.prefix 太短，四要素与流程写不全');
-      else ok(`persona.prefix：${prefix.length} 字`);
-      for (const marker of ['W 我是', 'P 要什么', 'A 给谁', 'C 约束', '一次只问一个', '只有正文', '自检 7 条', '口语化', '废话', '姜涛']) {
-        if (!prefix.includes(marker)) bad(`persona.prefix 缺少段落标记：${marker}`);
+      if ((cfg.plugins || []).some((p) => p.id === 'persona')) {
+        bad('预设里不要放 persona 行：宿主会忽略它，人格改由宿主级注入（lib/index.js + persona.md）');
+      } else {
+        ok('预设不含 persona 行（人格走宿主级注入）');
       }
-      if (persona?.config?.complete) bad('persona.complete 不能为 true：会顶掉工具与运行时提示');
+      const injector = allRows.find((r) => r.id === 'wpac-persona');
+      if (!injector) bad('缺少宿主级注入行 wpac-persona');
+      else if (injector.name !== 'dsh-wpac') bad(`wpac-persona 行应指向本包（dsh-wpac），实际是 ${injector.name}`);
+      else ok('宿主级注入行：wpac-persona → dsh-wpac');
+      if (!fs.existsSync(path.join(root, 'lib', 'index.js'))) bad('缺少 lib/index.js（人格注入插件）');
+      else {
+        const lib = read('lib/index.js');
+        if (!lib.includes("agent/created")) bad('lib/index.js 没有监听 agent/created');
+        if (!lib.includes('sp.section(')) bad('lib/index.js 没有调用 systemPrompt.section');
+        else ok('人格注入插件：监听 agent/created，注册 system prompt 段');
+      }
+      if (!fs.existsSync(path.join(root, 'persona.md'))) bad('缺少 persona.md');
+      else {
+        const prefix = read('persona.md');
+        if (prefix.length < 800) bad('persona.md 太短，四要素与流程写不全');
+        else ok(`persona.md：${prefix.length} 字`);
+        for (const marker of ['W 我是', 'P 要什么', 'A 给谁', 'C 约束', '一次只问一个', '只有正文', '自检 7 条', '口语化', '废话', '姜涛']) {
+          if (!prefix.includes(marker)) bad(`persona.md 缺少段落标记：${marker}`);
+        }
+      }
     }
   }
 }
@@ -110,7 +128,7 @@ if (patch) {
 // ---- 3.4 服务隔离：预设里带服务的插件必须放在 isolate 组里 -----------------
 // 否则注册时 registry 会报「Preset services require isolate realms: …」，界面显示「加载失败」。
 if (patch) {
-  const presetPlugins = patch?.[0]?.insert?.find((row) => row.id === 'preset-wpac')?.config?.plugins ?? [];
+  const presetPlugins = (patch ?? []).flatMap((entry) => entry.insert ?? []).find((row) => row.id === 'preset-wpac')?.config?.plugins ?? [];
   let isolateOk = true;
   const walkGroups = (rows) => {
     for (const row of rows || []) {
@@ -235,7 +253,7 @@ if (profileDoc) {
       if (Array.isArray(row?.config)) collect(row.config);
     }
   };
-  collect(patch?.[0]?.insert?.find((r) => r.id === 'preset-wpac')?.config?.plugins);
+  collect((patch ?? []).flatMap((entry) => entry.insert ?? []).find((r) => r.id === 'preset-wpac')?.config?.plugins);
   if (known.size === 0) checks.push('  - 跳过：profile 里没有内联预设行（预设来自 bundle 层，无法比对）');
   else if (unknown.length) bad(`这些插件名在既有预设里没出现过，可能有笔误：${unknown.join(', ')}`);
   else ok('插件名与既有预设计一致（无新增依赖）');
