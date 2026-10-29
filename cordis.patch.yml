@@ -7,7 +7,7 @@
 #     wpac 技能目录。宿主机上已启用的插件（univer / sd / memory / computer-use …）
 #     由宿主上下文继承，无需在此重复声明。
 #
-# 修改提示词请只改 persona.prefix 与 skills/wpac/SKILL.md，
+# 修改提示词请只改 persona.md 与 skills/wpac/SKILL.md，
 # 改完跑 `node scripts/verify.mjs` 再装。
 
 - insert:
