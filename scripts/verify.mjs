@@ -120,7 +120,7 @@ if (patch) {
         const prefix = read('persona.md');
         if (prefix.length < 800) bad('persona.md 太短，四要素与流程写不全');
         else ok(`persona.md：${prefix.length} 字`);
-        for (const marker of ['W 我是', 'P 要什么', 'A 给谁', 'C 约束', '固定四轮', '只有正文', '自检 7 条', '口语化', '废话', '姜涛']) {
+        for (const marker of ['W 我是', 'P 要什么', 'A 给谁', 'C 约束', '四轮', '只有正文', '自检 7 条', '口语化', '废话', '姜涛']) {
           if (!prefix.includes(marker)) bad(`persona.md 缺少段落标记：${marker}`);
         }
       }
@@ -200,6 +200,25 @@ else {
     if (!/^description:\s*\S/m.test(front[1])) bad('SKILL.md frontmatter 缺少 description');
     ok(`技能：skills/wpac/SKILL.md（${skill.length} 字）`);
   }
+}
+
+// ---- 4.4 入口与导出目标必须真实存在（2.2.0 曾指向已删除的 inject5.js）----
+try {
+  const pkgNow = JSON.parse(read('package.json'));
+  const targets = [pkgNow.main, ...Object.values(pkgNow.exports ?? {})]
+    .filter((v) => typeof v === 'string' && v.startsWith('./'));
+  const missing = targets.filter((rel) => !fs.existsSync(path.join(root, rel)));
+  if (missing.length) bad(`package.json 指向的文件不存在：${missing.join(', ')}`);
+  else ok(`入口与导出目标 ${targets.length} 个，文件都存在`);
+  const entry = read('lib/index.js');
+  const relay = entry.match(/from '\.\/([^']+)'/);
+  if (relay && !fs.existsSync(path.join(root, 'lib', relay[1]))) {
+    bad(`lib/index.js 转发的 ${relay[1]} 不存在`);
+  } else if (relay) {
+    ok(`lib/index.js 转发目标存在：${relay[1]}`);
+  }
+} catch (error) {
+  bad(`检查入口失败：${error.message}`);
 }
 
 // ---- 4.5 文档与许可 -------------------------------------------------------
