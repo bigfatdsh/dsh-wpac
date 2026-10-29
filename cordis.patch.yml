@@ -17,7 +17,7 @@
         id: wpac
         name: 'WPAC · 先定义，再交付'
         description: 'W(我是)/P(要什么)/A(给谁看)/C(约束)：先补全四要素、列选项追问，再极致优化提示词并自检交付。作者：姜涛'
-        order: 6
+        order: 0
         plugins:
           - id: persona
             name: '@deepseek-ai/dsh-persona'
@@ -119,13 +119,10 @@
             name: '@deepseek-ai/dsh-tool-jobs'
           - id: tool-schedule
             name: '@deepseek-ai/dsh-tool-schedule'
+          # 技能走默认根目录（~/.dsh/skills），由 scripts/install-skill.mjs 安装；
+          # 这里不再写 customSkillDirs，预设里就没有任何 !!js 表达式，注册最不容易出岔子。
           - id: skill-filesystem
             name: '@deepseek-ai/dsh-skill-filesystem'
-            config:
-              customSkillDirs:
-                - !!js >-
-                  process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('dsh-wpac/package.json')),
-                  'skills')
           - id: tool-skill
             name: '@deepseek-ai/dsh-tool-skill'
           - id: command-goal
