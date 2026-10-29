@@ -107,6 +107,31 @@ if (patch) {
   }
 }
 
+// ---- 3.4 服务隔离：预设里带服务的插件必须放在 isolate 组里 -----------------
+// 否则注册时 registry 会报「Preset services require isolate realms: …」，界面显示「加载失败」。
+if (patch) {
+  const presetPlugins = patch?.[0]?.insert?.find((row) => row.id === 'preset-wpac')?.config?.plugins ?? [];
+  let isolateOk = true;
+  const walkGroups = (rows) => {
+    for (const row of rows || []) {
+      const children = Array.isArray(row.config) ? row.config : [];
+      const names = children.map((child) => child?.name).filter(Boolean);
+      const isolate = row.isolate ?? {};
+      if (names.some((name) => name.endsWith('dsh-compaction-tool-result-pruner')) && isolate.toolResultPruner !== true) {
+        bad(`组 ${row.id} 含 tool-result-pruner 却没 isolate.toolResultPruner：预设会显示「加载失败」`);
+        isolateOk = false;
+      }
+      if (names.some((name) => name.endsWith('dsh-workflow-ptc')) && isolate.workflowEngine !== true) {
+        bad(`组 ${row.id} 含 workflow-ptc 却没 isolate.workflowEngine：预设会显示「加载失败」`);
+        isolateOk = false;
+      }
+      walkGroups(children);
+    }
+  };
+  walkGroups(presetPlugins);
+  if (isolateOk) ok('服务隔离完整（toolResultPruner / workflowEngine）');
+}
+
 // ---- 3.5 !!js 表达式：必须能编译，技能目录必须真能算出来 -------------------
 function collectJs(node, out = []) {
   if (node && typeof node === 'object') {
