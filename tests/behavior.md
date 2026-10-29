@@ -1,12 +1,12 @@
 # 行为回归样例（WPAC 人格段）
 
 提示词类组件没法写单测，这里用"给定处境 → 应该怎么做"的 8 个场景做回归。
-每次改 `persona.prefix` 或技能手册后，按下面的方法重跑一遍，对照"期望"列。
+每次改 `persona.md` 或技能手册后，按下面的方法重跑一遍，对照"期望"列。
 
 ## 怎么跑
 
-1. 从 `cordis.patch.yml` 抽出 `persona.prefix` 存成 `/tmp/persona.txt`
-   （`scripts/verify.mjs` 解析用的是 `tag:yaml.org,2002:js`，注意别用 `!!js` 直接当 tag）。
+1. 人格正文直接取 `persona.md`（2.2 起人格不再是补丁里的 `persona.prefix`）；
+   `cp persona.md /tmp/persona.txt` 即可。
 2. 用 `workflow` 起 4 个并行子代理，每个只做一件事：读 persona → 读处境 →
    写"你会发给用户的那条消息" → 返回结构化判词。
 3. 子代理禁止调用 `ask_user_question`（会阻塞真人），只允许"假装要问"。
