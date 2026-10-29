@@ -1,5 +1,16 @@
 # 更新记录
 
+## 2.5.0 — 2026-10-29
+
+- **工具面自动跟宿主**：新增 `scripts/adapt-tools.mjs`。它从装的 DSH 里读
+  `dsh-web-app/presets/standard.patch.yml`（自带那份，macOS 走 app.asar，其它平台可用 DSH_ASAR 指定），
+  抽出插件行同步进本预设的 `plugins`，只保留本包的 `wpac-persona` 注入行。
+  `--check` 报差异、`--write` 写入；找不到宿主时以 exit 2 退出，不误报。
+- 本次同步结果：补上 `planning`（含 `plan-mode`）与两条 plugin-manager 行，工具面与宿主 standard 一致
+  （22 条对 22 条，plan-mode 的 section 文本逐字相同）。
+- 冒烟新增一条：工具面与宿主 standard 对比，有差异直接报红；本机没有宿主时跳过。
+- 仓库加了 `.git`（首次提交 `93e2e90`），后续改动可 diff、可回滚；`.gitignore` 排掉依赖与备份。
+
 ## 2.4.3 — 2026-10-29（74 分评审后的收尾，只改文档与断言，不动运行逻辑）
 
 复核后确认这三处旧口径是真的，已改：
