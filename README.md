@@ -59,7 +59,7 @@ node scripts/verify.mjs          # 先自检
 plugin_manager  action=install_bundle  target=<本目录的绝对路径>   # 例：~/Documents/deepseek-harness/default-workspace/adapted/dsh-wpac
 ```
 
-装完在新建会话的预设列表里选「WPAC · 先定义，再交付」。
+装完在新建会话的预设列表里选「wpac模式」。
 
 ## 长期设定（可选）
 
