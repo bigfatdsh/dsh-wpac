@@ -1,5 +1,20 @@
 # 更新记录
 
+## 1.8.0 — 2026-10-29
+
+**根因找到并改架构**：宿主把人格段注册成 `deployment:persona-prefix`，预设里的 `persona` 行在 agent 挂载时被忽略——
+所以 WPAC 会话一直跑的是部署级人格（"You are a coding agent…"），四个问题自然不会出现。用探针读 live agent 的
+system prompt 实证：12 个段里只有 54 字的部署人格，没有 WPAC。
+
+改法（与同宿主验证过的 dsh-fish 一致）：
+
+- 人格文本独立成 `persona.md`（单一真源）；
+- 新增 `lib/index.js` 宿主级插件，监听 `agent/created`，用 `agentPresets.composedPreset(agent.ctx)` 判断会话预设，
+  命中 `wpac` 就 `agent.ctx.systemPrompt.section({ text })` 挂上协议段；
+- 预设里删掉 `persona` 行，只保留工具面；
+- 自检脚本同步改：校验 `persona.md`、注入插件、宿主级行，并禁止预设里再出现 persona 行。
+
+
 ## 1.7.0 — 2026-10-29
 
 参考公开的反 AI slop 写作指南（Louis-François Bouchard / Towards AI），对"去 AI 味"做专项升级：
