@@ -124,6 +124,20 @@ node scripts/publish-github.mjs             # 推到 bigfatdsh/dsh-wpac
 即便预设暂时选不到，也还能用：技能已装进 `~/.dsh/skills/wpac`，
 任何会话里说「用 wpac」或直接 `skill wpac` 就能加载同一套手册。
 
+## 工具面跟着宿主走
+
+工具行不是永久手抄的：`scripts/adapt-tools.mjs` 会从当前装的 DSH 里找到
+`dsh-web-app/presets/standard.patch.yml`（装机自带的那份），把它的插件行同步进本预设，
+只保留本包自己的 `wpac-persona` 注入行。
+
+```bash
+node scripts/adapt-tools.mjs            # 只报告差异（exit 1 = 有差异）
+node scripts/adapt-tools.mjs --write    # 写入 cordis.patch.yml，重装后生效
+```
+
+找不到宿主时用 `DSH_ASAR` 指到 `app.asar`，或 `DSH_WEB_APP_PRESET` 直接指到那份 yml。
+冒烟脚本会顺带跑一次对比，有差异直接报红。
+
 ## 冒烟（一条命令）
 
 ```bash
