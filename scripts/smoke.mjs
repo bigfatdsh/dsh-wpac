@@ -42,7 +42,7 @@ else {
 const persona = read('persona.md');
 const rules = [
   ['四轮追问', '四轮'],
-  ['不走四轮的开口', '不走四轮'],
+  ['先问再写的铁律', '先问再写'],
   ['纯正文', '只有正文'],
   ['去 AI 味', '去 AI 味'],
   ['自检', '自检'],
@@ -56,7 +56,7 @@ for (const [label, marker] of rules) {
 const skill = read('skills/wpac/SKILL.md');
 const readme = read('README.md');
 const confirmRule = '1 题确认';
-if (!persona.includes('只问 1 题确认')) bad('人格没写「四要素齐全只问 1 题确认」');
+if (!persona.includes('也要问 1 题确认')) bad('人格没写「四要素齐全也要问 1 题确认」');
 else if (!skill.includes(confirmRule)) bad('手册没写「1 题确认」——和人格冲突');
 else if (!readme.includes(confirmRule)) bad('README 验收没写「1 题确认」——和人格冲突');
 else ok('追问口径三处一致（人格 / 手册 / README）');
