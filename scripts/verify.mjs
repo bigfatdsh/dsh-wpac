@@ -103,13 +103,13 @@ if (patch) {
       }
       const injector = allRows.find((r) => r.id === 'wpac-persona');
       if (!injector) bad('缺少宿主级注入行 wpac-persona');
-      else if (injector.name !== 'dsh-wpac') bad(`wpac-persona 行应指向本包（dsh-wpac），实际是 ${injector.name}`);
+      else if (injector.name !== 'dsh-wpac/inject') bad(`wpac-persona 行应指向 dsh-wpac/inject，实际是 ${injector.name}`);
       else ok('宿主级注入行：wpac-persona → dsh-wpac');
-      if (!fs.existsSync(path.join(root, 'lib', 'index.js'))) bad('缺少 lib/index.js（人格注入插件）');
+      if (!fs.existsSync(path.join(root, 'lib', 'inject2.js'))) bad('缺少 lib/inject2.js（人格注入实现）');
       else {
-        const lib = read('lib/index.js');
+        const lib = read('lib/inject2.js');
         if (!lib.includes("agent/created")) bad('lib/index.js 没有监听 agent/created');
-        if (!lib.includes('sp.section(')) bad('lib/index.js 没有调用 systemPrompt.section');
+        if (!lib.includes("name: 'wpac:protocol'")) bad('section 调用缺少 name（宿主会拒绝）');
         else ok('人格注入插件：监听 agent/created，注册 system prompt 段');
       }
       if (!fs.existsSync(path.join(root, 'persona.md'))) bad('缺少 persona.md');
