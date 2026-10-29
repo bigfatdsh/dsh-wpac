@@ -2,7 +2,7 @@
 #
 # 这个 bundle 只做一件事：向 profile 的 Loader 列表插入一行预设声明。
 #   * 不动任何既有预设 / 宿主行，避免上游升级时静默漂移；
-#   * 预设 id = wpac，界面上显示为「WPAC · 先定义，再交付」；
+#   * 预设 id = wpac，界面上显示为「wpac模式」；
 #   * 工具面克隆自 standard（已验证可激活），仅替换人格段并挂载本包自带的
 #     wpac 技能目录。宿主机上已启用的插件（univer / sd / memory / computer-use …）
 #     由宿主上下文继承，无需在此重复声明。
@@ -15,7 +15,7 @@
       name: '@deepseek-ai/dsh-agent-preset'
       config:
         id: wpac
-        name: 'WPAC · 先定义，再交付'
+        name: 'wpac模式'
         description: 'W(我是)/P(要什么)/A(给谁看)/C(约束)：先补全四要素、列选项追问，再极致优化提示词并自检交付。作者：姜涛'
         order: 0
         plugins:
