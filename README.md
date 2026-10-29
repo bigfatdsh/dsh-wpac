@@ -24,7 +24,7 @@ W / P / A / C 四要素，缺什么就带选项追问，补齐后把委托重写
 dsh-wpac/
 ├── package.json           # bundle 声明：dsh.bundle.patch → cordis.patch.yml
 ├── cordis.patch.yml       # 两条 insert：preset-wpac（工具面）+ wpac-persona（宿主级注入）
-├── lib/inject5.js         # 预设内插件：把 persona.md 挂进 agent 的 system prompt
+├── lib/inject6.js         # 预设内插件：把 persona.md 挂进 agent 的 system prompt（文件名带版本号，见下）
 ├── persona.md             # 人格段正文（唯一真源）
 ├── skills/wpac/SKILL.md   # 深度手册（判定表/选项库/约束清单/模板/例句/评分表）
 ├── templates/profile.md   # 长期设定模板（可选，复制到工作区 wpac/profile.md）
@@ -46,6 +46,28 @@ dsh-wpac/
 3. **工具层**（`plugins` 列表）：决定这个预设能用哪些工具。工具面克隆自 `standard`
    （已验证可激活），宿主上已启用的插件（`univer_*`、`sd_*`、`memory`、
    `computer-use` 等）由宿主上下文继承，**不要在这里重复声明**，否则会出现重复注册。
+
+## 最终架构与验证方法
+
+一条链：
+
+```
+cordis.patch.yml（预设 wpac）
+   └── plugins[0] wpac-persona → dsh-wpac/inject → lib/inject6.js
+          └── ctx.systemPrompt.section({ name:'wpac:protocol', order:10, text })
+                 └── persona.md（每轮现读，改文案不用重启）
+```
+
+四条实测结论（写死在这里，避免以后重复踩）：
+
+1. 预设里的 `persona` 行会被部署级人格顶掉，人格必须由插件注册。
+2. 插件必须先 `export const inject = ['systemPrompt']`，否则读 `ctx.systemPrompt` 直接抛错，整个预设变「加载失败」。
+3. `section()` 必须同时给 `name` 与 `order`。
+4. **验证方式**：不要看 `ctx.systemPrompt.assemble()`——它只反映部署级段，会误判成"没挂上"；
+   要读会话里真正发给模型的 system 消息：`agent.session.deriveMessages()` 的第一条，
+   里面出现「你是 **WPAC**」才算挂上。
+
+`lib/inject6.js` 文件名带版本号是刻意的：ESM 按 URL 缓存，改实现要换文件名才能重装即生效。
 
 ## 安装
 
