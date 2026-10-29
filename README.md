@@ -92,7 +92,10 @@ node scripts/publish-github.mjs             # 推到 bigfatdsh/dsh-wpac
    node scripts/verify.mjs                      # 声明/人格/技能是否完整
    ```
    再看 `plugin_manager` 的 `list_plugins`，`preset-wpac` 应为 `enabled: true`、`fiberPhase: active`。
-4. 都正常但还是不显示 → 多半是界面缓存，重开 App 即可。
+4. 卡片上写「**加载失败**」→ 预设里的服务没有 isolate（registry 报
+   `Preset services require isolate realms: …`）。1.3.1 已修 `toolResultPruner` / `workflowEngine`
+   两处，`scripts/verify.mjs` 现在会静态拦住这类问题。
+5. 都正常但还是不显示 → 多半是界面缓存，重开 App 即可。
 
 即便预设暂时选不到，也还能用：技能已装进 `~/.dsh/skills/wpac`，
 任何会话里说「用 wpac」或直接 `skill wpac` 就能加载同一套手册。
