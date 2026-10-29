@@ -23,7 +23,9 @@ W / P / A / C 四要素，缺什么就带选项追问，补齐后把委托重写
 ```
 dsh-wpac/
 ├── package.json           # bundle 声明：dsh.bundle.patch → cordis.patch.yml
-├── cordis.patch.yml       # 唯一入口：insert 一行 preset-wpac
+├── cordis.patch.yml       # 两条 insert：preset-wpac（工具面）+ wpac-persona（宿主级注入）
+├── lib/index.js           # agent/created 时给 wpac 会话挂 system prompt 段
+├── persona.md             # 人格段正文（唯一真源）
 ├── skills/wpac/SKILL.md   # 深度手册（判定表/选项库/约束清单/模板/例句/评分表）
 ├── templates/profile.md   # 长期设定模板（可选，复制到工作区 wpac/profile.md）
 ├── scripts/verify.mjs     # 装前自检
