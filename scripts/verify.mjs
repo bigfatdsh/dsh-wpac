@@ -99,7 +99,7 @@ if (patch) {
       const prefix = persona?.config?.prefix || '';
       if (prefix.length < 800) bad('persona.prefix 太短，四要素与流程写不全');
       else ok(`persona.prefix：${prefix.length} 字`);
-      for (const marker of ['W（我是）', 'P（要什么）', 'A（给谁）', 'C（约束）', 'WPAC 简报', '自检 9 条', '工具纪律', '待补', 'skill 加载', '姜涛']) {
+      for (const marker of ['W 我是', 'P 要什么', 'A 给谁', 'C 约束', '必须先问', '绝不进正文', '自检 8 条', '废话', '姜涛']) {
         if (!prefix.includes(marker)) bad(`persona.prefix 缺少段落标记：${marker}`);
       }
       if (persona?.config?.complete) bad('persona.complete 不能为 true：会顶掉工具与运行时提示');
