@@ -114,4 +114,4 @@
 # 人格文本在 persona.md（与 preset 声明解耦，改文案只改那一个文件）。
 - insert:
     - id: wpac-persona
-      name: 'dsh-wpac'
+      name: 'dsh-wpac/inject'
