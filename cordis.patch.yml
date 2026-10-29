@@ -3,9 +3,10 @@
 # 这个 bundle 只做一件事：向 profile 的 Loader 列表插入一行预设声明。
 #   * 不动任何既有预设 / 宿主行，避免上游升级时静默漂移；
 #   * 预设 id = wpac，界面上显示为「wpac模式」；
-#   * 工具面克隆自 standard（已验证可激活），仅替换人格段并挂载本包自带的
-#     wpac 技能目录。宿主机上已启用的插件（univer / sd / memory / computer-use …）
-#     由宿主上下文继承，无需在此重复声明。
+#   * 工具面克隆自 standard（已验证可激活）；人格由预设内的 wpac-persona 子插件注入
+#     （读 persona.md），技能由 scripts/install-skill.mjs 实体安装到 ~/.dsh/skills。
+#     宿主机上已启用的插件（univer / sd / memory / computer-use …）由宿主上下文继承。
+#   * 预设内直接引用本包，装/卸都会回 restart-required，改完要重启一次 App。
 #
 # 修改提示词请只改 persona.md 与 skills/wpac/SKILL.md，
 # 改完跑 `node scripts/verify.mjs` 再装。
