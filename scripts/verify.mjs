@@ -6,9 +6,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const profileDir = process.env.DSH_PROFILE_DIR || path.join(process.env.DSH_HOME || '', 'profiles', 'desktop');
 const failures = [];
 const checks = [];
 const ok = (msg) => checks.push(`  ✓ ${msg}`);
@@ -57,7 +58,7 @@ if (!YAML) {
 } else {
   try {
     patch = YAML.parse(read('cordis.patch.yml'), {
-      customTags: [{ tag: '!!js', resolve: (s) => ({ js: s }) }],
+      customTags: [{ tag: 'tag:yaml.org,2002:js', resolve: (s) => ({ js: s }) }],
       logLevel: 'silent',
     });
     ok('cordis.patch.yml 语法可解析');
@@ -98,10 +99,45 @@ if (patch) {
       const prefix = persona?.config?.prefix || '';
       if (prefix.length < 800) bad('persona.prefix 太短，四要素与流程写不全');
       else ok(`persona.prefix：${prefix.length} 字`);
-      for (const marker of ['W（我是）', 'P（要什么）', 'A（给谁）', 'C（约束）', 'WPAC 简报', '自检 9 条', '工具纪律', '姜涛']) {
+      for (const marker of ['W（我是）', 'P（要什么）', 'A（给谁）', 'C（约束）', 'WPAC 简报', '自检 9 条', '工具纪律', '待补', 'skill 加载', '姜涛']) {
         if (!prefix.includes(marker)) bad(`persona.prefix 缺少段落标记：${marker}`);
       }
       if (persona?.config?.complete) bad('persona.complete 不能为 true：会顶掉工具与运行时提示');
+    }
+  }
+}
+
+// ---- 3.5 !!js 表达式：必须能编译，技能目录必须真能算出来 -------------------
+function collectJs(node, out = []) {
+  if (node && typeof node === 'object') {
+    if (typeof node.js === 'string' && Object.keys(node).length === 1) out.push(node.js);
+    for (const value of Object.values(node)) collectJs(value, out);
+  }
+  return out;
+}
+if (patch) {
+  const exprs = collectJs(patch);
+  if (exprs.length === 0) bad('补丁里没有 !!js 表达式（预期至少有一条 customSkillDirs）');
+  let compiled = 0;
+  for (const expr of exprs) {
+    try {
+      new Function('baseUrl', 'process', `return (${expr})`);
+      compiled += 1;
+    } catch (error) {
+      bad(`!!js 表达式语法错误：${expr.slice(0, 60)}… → ${error.message}`);
+    }
+  }
+  if (exprs.length > 0 && compiled === exprs.length) ok(`!!js 表达式 ${compiled} 条均可编译`);
+  const skillExpr = exprs.find((expr) => expr.includes('skills'));
+  if (!skillExpr) bad('找不到 customSkillDirs 的 !!js 表达式');
+  else {
+    try {
+      const baseUrl = pathToFileURL(path.join(profileDir, 'package.json')).href;
+      const value = new Function('baseUrl', 'process', `return (${skillExpr})`)(baseUrl, process);
+      if (typeof value === 'string' && fs.existsSync(path.join(value, 'wpac', 'SKILL.md'))) ok(`!!js 求值：技能目录 ${value}`);
+      else bad(`!!js 求值结果不是有效技能目录：${String(value)}`);
+    } catch (error) {
+      bad(`!!js 求值失败：${error.message}`);
     }
   }
 }
@@ -121,7 +157,7 @@ else {
 }
 
 // ---- 4.5 文档与许可 -------------------------------------------------------
-for (const file of ['README.md', 'CHANGELOG.md', 'LICENSE']) {
+for (const file of ['README.md', 'CHANGELOG.md', 'LICENSE', 'tests/behavior.md']) {
   if (!fs.existsSync(path.join(root, file))) bad(`缺少 ${file}`);
 }
 if (fs.existsSync(path.join(root, 'LICENSE')) && !read('LICENSE').includes('姜涛')) {
@@ -131,13 +167,12 @@ if (fs.existsSync(path.join(root, 'templates', 'profile.md'))) ok('长期设定�
 else bad('缺少 templates/profile.md');
 
 // ---- 5. 与现有预设不重名 ---------------------------------------------------
-const profileDir = process.env.DSH_PROFILE_DIR || path.join(process.env.DSH_HOME || '', 'profiles', 'desktop');
 const profileCordis = path.join(profileDir, 'cordis.yml');
 let profileDoc = null;
 if (YAML && fs.existsSync(profileCordis)) {
   try {
     profileDoc = YAML.parse(fs.readFileSync(profileCordis, 'utf8'), {
-      customTags: [{ tag: '!!js', resolve: (s) => ({ js: s }) }],
+      customTags: [{ tag: 'tag:yaml.org,2002:js', resolve: (s) => ({ js: s }) }],
       logLevel: 'silent',
     });
     const clash = (profileDoc || []).filter(
