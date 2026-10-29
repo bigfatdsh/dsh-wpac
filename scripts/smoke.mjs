@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -84,6 +85,15 @@ for (const [name, text] of [['手册', skill], ['README', readme], ['人格', pe
   if (/三行|3 行说明/.test(text)) bad(`${name} 里还留着「三行说明」，与「最多一行」冲突`);
 }
 ok('交付口径无「三行」残留');
+
+// 5.5 工具面是否跟得上宿主 standard（找不到宿主就跳过）
+try {
+  execFileSync(process.execPath, [path.join(root, 'scripts', 'adapt-tools.mjs')], { stdio: 'pipe' });
+  ok('工具面与宿主 standard 一致');
+} catch (error) {
+  if (error.status === 1) bad('工具面与宿主 standard 有差异（跑 adapt-tools.mjs --write 后重装）');
+  else ok('跳过工具面对比（本机找不到宿主 standard）');
+}
 
 // 6. 人工委托（自动断言做不到的部分）
 console.log('\n人工跑这 5 条，对照期望：');
