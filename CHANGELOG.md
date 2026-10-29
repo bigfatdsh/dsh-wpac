@@ -1,5 +1,16 @@
 # 更新记录
 
+## 2.1.0 — 2026-10-29
+
+- **注入挪进预设**：宿主级 `agent/created` 里调 `section()` 注册成功却不进 `assemble()`（实测段数一直是 12），
+  改成预设内一行插件 `wpac-persona → dsh-wpac/inject`，`apply` 时直接挂 agent 自己的 system prompt；
+  补 `inject = ['systemPrompt']` 声明（否则报 "cannot get property systemPrompt without inject"）。
+  实测：预设从 broken 恢复为 ok，7 个预设全部正常。
+- **去 AI 味再加一层**：人格补「每段一个可指认的东西 / 动作代替评价 / 允许口语重复与反问 / 不写总分总」；
+  手册新增「人味 12 条」与「三遍改稿法（删→换→读）」。
+- **架构清理**：删掉 inject.js / inject2.js / inject3.js / inject4.js 四个废弃迭代版本，
+  `lib/` 只剩 `index.js`（转发）与 `inject5.js`（实现）。
+
 ## 1.9.1 — 2026-10-29
 
 - 预设显示名改为「**wpac模式**」（内部 id 仍是 `wpac`，会话记录、注入判断都不受影响）。
