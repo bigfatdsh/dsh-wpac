@@ -1,5 +1,12 @@
 # 更新记录
 
+## 2.2.0 — 2026-10-29（最终版）
+
+- 注入定案：预设内插件注册 `wpac:protocol` 段，实测已进会话 system 消息（四轮 W→P→A→C 正常跑）。
+- 健壮性：`section()` 包 try/catch（重复挂载不再拖垮预设）；`persona.md` 缺失时用内置兜底人格。
+- 架构收敛：`lib/` 只留 `index.js`（转发）+ `inject6.js`（实现）；文档写清"验证要看 system 消息、不要看 assemble()"。
+- 自检 23 项。
+
 ## 2.1.0 — 2026-10-29
 
 - **注入挪进预设**：宿主级 `agent/created` 里调 `section()` 注册成功却不进 `assemble()`（实测段数一直是 12），
