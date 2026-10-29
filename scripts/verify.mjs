@@ -1,0 +1,198 @@
+#!/usr/bin/env node
+// dsh-wpac 自检脚本：装之前先跑一遍，确认补丁结构、人格段、技能文件都完整。
+// 用法：node scripts/verify.mjs
+// 退出码：0 通过，1 失败（打印每一条问题）。
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+
+const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const failures = [];
+const checks = [];
+const ok = (msg) => checks.push(`  ✓ ${msg}`);
+const bad = (msg) => {
+  checks.push(`  ✗ ${msg}`);
+  failures.push(msg);
+};
+const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+
+// ---- 1. package.json -------------------------------------------------------
+let pkg;
+try {
+  pkg = JSON.parse(read('package.json'));
+  ok(`package.json: ${pkg.name}@${pkg.version}`);
+} catch (error) {
+  bad(`package.json 无法解析：${error.message}`);
+}
+if (pkg) {
+  if (pkg.dsh?.bundle?.patch !== './cordis.patch.yml') bad('package.json 缺少 dsh.bundle.patch 指向 ./cordis.patch.yml');
+  else ok('dsh.bundle.patch 指向 cordis.patch.yml');
+  if (pkg.author !== '姜涛') bad('package.json author 必须为「姜涛」');
+  else ok('作者：姜涛');
+}
+
+// ---- 2. YAML 解析（允许 !!js 自定义标签）-----------------------------------
+const require = createRequire(import.meta.url);
+function loadYaml() {
+  const candidates = [
+    'yaml',
+    path.join(process.env.DSH_PROFILE_DIR || '', 'node_modules', 'yaml'),
+    path.join(process.env.DSH_HOME || '', 'profiles', 'desktop', 'node_modules', 'yaml'),
+  ];
+  for (const candidate of candidates) {
+    try {
+      return require(candidate);
+    } catch {
+      /* 试下一个 */
+    }
+  }
+  return null;
+}
+const YAML = loadYaml();
+let patch = null;
+if (!YAML) {
+  bad('找不到 yaml 包：请在 profile 目录或设置 DSH_PROFILE_DIR 后重跑');
+} else {
+  try {
+    patch = YAML.parse(read('cordis.patch.yml'), {
+      customTags: [{ tag: '!!js', resolve: (s) => ({ js: s }) }],
+      logLevel: 'silent',
+    });
+    ok('cordis.patch.yml 语法可解析');
+  } catch (error) {
+    bad(`cordis.patch.yml 解析失败：${error.message}`);
+  }
+}
+
+// ---- 3. 预设声明 ----------------------------------------------------------
+if (patch) {
+  if (!Array.isArray(patch) || patch.length !== 1 || !Array.isArray(patch[0]?.insert)) {
+    bad('顶层必须是只含一条 insert 的数组（不要改动宿主行）');
+  } else {
+    ok('顶层结构：单条 insert');
+    const row = patch[0].insert.find((r) => r.id === 'preset-wpac');
+    if (!row) bad('缺少 id: preset-wpac 的行');
+    else {
+      ok('行 id：preset-wpac');
+      if (row.name !== '@deepseek-ai/dsh-agent-preset') bad('行 name 必须是 @deepseek-ai/dsh-agent-preset');
+      const cfg = row.config || {};
+      if (cfg.id !== 'wpac') bad('config.id 必须是 wpac');
+      else ok('config.id：wpac');
+      if (!Number.isFinite(cfg.order)) bad('config.order 必须是数字');
+      else ok(`config.order：${cfg.order}`);
+      if (!cfg.name) bad('缺少显示名 config.name');
+      if (!cfg.description || !cfg.description.includes('姜涛')) bad('config.description 必须写清楚用途并标注作者姜涛');
+      else ok('描述含作者');
+      if (!Array.isArray(cfg.plugins) || cfg.plugins.length < 5) bad('config.plugins 为空或过少');
+      else ok(`plugins：${cfg.plugins.length} 行`);
+      const ids = (cfg.plugins || []).map((p) => p.id);
+      const dup = ids.filter((id, i) => ids.indexOf(id) !== i);
+      if (dup.length) bad(`插件 id 重复：${dup.join(', ')}`);
+      else ok('插件 id 无重复');
+      for (const required of ['persona', 'tool-fs', 'tool-ask-user', 'tool-todo', 'tool-web', 'tool-skill', 'present']) {
+        if (!ids.includes(required)) bad(`缺少必需插件行：${required}`);
+      }
+      const persona = (cfg.plugins || []).find((p) => p.id === 'persona');
+      const prefix = persona?.config?.prefix || '';
+      if (prefix.length < 800) bad('persona.prefix 太短，四要素与流程写不全');
+      else ok(`persona.prefix：${prefix.length} 字`);
+      for (const marker of ['W（我是）', 'P（要什么）', 'A（给谁）', 'C（约束）', 'WPAC 简报', '自检 9 条', '工具纪律', '姜涛']) {
+        if (!prefix.includes(marker)) bad(`persona.prefix 缺少段落标记：${marker}`);
+      }
+      if (persona?.config?.complete) bad('persona.complete 不能为 true：会顶掉工具与运行时提示');
+    }
+  }
+}
+
+// ---- 4. 技能包 ------------------------------------------------------------
+const skillFile = path.join(root, 'skills', 'wpac', 'SKILL.md');
+if (!fs.existsSync(skillFile)) bad('缺少 skills/wpac/SKILL.md');
+else {
+  const skill = fs.readFileSync(skillFile, 'utf8');
+  const front = skill.match(/^---\n([\s\S]*?)\n---/);
+  if (!front) bad('SKILL.md 缺少 frontmatter');
+  else {
+    if (!/^name:\s*wpac\s*$/m.test(front[1])) bad('SKILL.md frontmatter 的 name 必须是 wpac');
+    if (!/^description:\s*\S/m.test(front[1])) bad('SKILL.md frontmatter 缺少 description');
+    ok(`技能：skills/wpac/SKILL.md（${skill.length} 字）`);
+  }
+}
+
+// ---- 4.5 文档与许可 -------------------------------------------------------
+for (const file of ['README.md', 'CHANGELOG.md', 'LICENSE']) {
+  if (!fs.existsSync(path.join(root, file))) bad(`缺少 ${file}`);
+}
+if (fs.existsSync(path.join(root, 'LICENSE')) && !read('LICENSE').includes('姜涛')) {
+  bad('LICENSE 里没有作者署名');
+}
+if (fs.existsSync(path.join(root, 'templates', 'profile.md'))) ok('长期设定模板存在');
+else bad('缺少 templates/profile.md');
+
+// ---- 5. 与现有预设不重名 ---------------------------------------------------
+const profileDir = process.env.DSH_PROFILE_DIR || path.join(process.env.DSH_HOME || '', 'profiles', 'desktop');
+const profileCordis = path.join(profileDir, 'cordis.yml');
+let profileDoc = null;
+if (YAML && fs.existsSync(profileCordis)) {
+  try {
+    profileDoc = YAML.parse(fs.readFileSync(profileCordis, 'utf8'), {
+      customTags: [{ tag: '!!js', resolve: (s) => ({ js: s }) }],
+      logLevel: 'silent',
+    });
+    const clash = (profileDoc || []).filter(
+      (e) => e?.id === 'preset-wpac' || e?.config?.id === 'wpac',
+    );
+    if (clash.length) bad('profile 的 cordis.yml 里已存在 preset-wpac 行：本包应只通过 bundle 层声明，避免重复');
+    else ok('与现有预设无 id 冲突');
+  } catch (error) {
+    bad(`读取 profile cordis.yml 失败：${error.message}`);
+  }
+} else {
+  checks.push('  - 跳过：找不到 profile 的 cordis.yml');
+}
+
+// ---- 6. 插件名都在既有预设里出现过（防止笔误）------------------------------
+if (profileDoc) {
+  const known = new Set();
+  const scan = (rows) => {
+    for (const row of rows || []) {
+      if (row?.name) known.add(row.name);
+      if (Array.isArray(row?.config)) scan(row.config);
+    }
+  };
+  for (const entry of profileDoc) {
+    scan(entry?.config?.plugins);
+    if (Array.isArray(entry?.config)) scan(entry.config);
+  }
+  const unknown = [];
+  const collect = (rows) => {
+    for (const row of rows || []) {
+      if (row?.name && !known.has(row.name)) unknown.push(row.name);
+      if (Array.isArray(row?.config)) collect(row.config);
+    }
+  };
+  collect(patch?.[0]?.insert?.find((r) => r.id === 'preset-wpac')?.config?.plugins);
+  if (unknown.length) bad(`这些插件名在既有预设里没出现过，可能有笔误：${unknown.join(', ')}`);
+  else ok('插件名与既有预设计一致（无新增依赖）');
+}
+
+// ---- 7. 技能目录表达式在本机可解析 ----------------------------------------
+try {
+  const req = createRequire(path.join(profileDir, 'package.json'));
+  const pkgPath = req.resolve('dsh-wpac/package.json');
+  const skillDir = path.join(path.dirname(pkgPath), 'skills');
+  if (!fs.existsSync(path.join(skillDir, 'wpac', 'SKILL.md'))) bad(`技能目录解析后不存在 SKILL.md：${skillDir}`);
+  else ok(`技能目录可解析：${skillDir}`);
+} catch (error) {
+  bad(`customSkillDirs 表达式解析失败（dsh-wpac 尚未装进 profile？）：${error.message}`);
+}
+
+// ---- 输出 -----------------------------------------------------------------
+console.log(`dsh-wpac 自检（${root}）`);
+console.log(checks.join('\n'));
+if (failures.length) {
+  console.error(`\n失败 ${failures.length} 项`);
+  process.exit(1);
+}
+console.log('\n全部通过');
