@@ -43,3 +43,21 @@
 | stage1 | 「帮我写一篇关于大学生活的文章」 | 只问 W，一题，不动笔 | ✅ 1 题 4 选项 |
 | stage2 | 上一轮已答 W=大一新生 | 只问 P，一题 | ✅ 1 题 4 选项 |
 | final | 四槽都齐 | 纯正文，零附加，口语化 | ✅ 无说明/字数/客套 |
+
+## 验证人格是否真的挂上（2026-10-29 定案）
+
+**不要**用 `ctx.systemPrompt.assemble()` 判断——它只反映部署级段，会误报"没挂上"（本人踩了三轮）。
+
+正确做法：读会话里真正发给模型的 system 消息。
+
+```js
+const agent = ctx.agents.get(sessionId);
+const msgs = agent.session.deriveMessages();
+msgs[0].content   // 应包含「你是 **WPAC**」
+```
+
+实测记录（会话 `44240b42`，2026-10-29 21:55）：
+
+- system 消息第一条里同时有 base 人格与「你是 **WPAC**」；
+- 对话按 W → P → A → C 逐轮提问（`w_identity` / `p_purpose` / `a_reader` / 字数约束）；
+- 成品为纯正文 499 字，无小标题、口语化。
