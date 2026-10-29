@@ -105,14 +105,14 @@ if (patch) {
       if (!injector) bad('预设里缺少注入插件行 wpac-persona');
       else if (injector.name !== 'dsh-wpac/inject') bad(`wpac-persona 行应指向 dsh-wpac/inject，实际是 ${injector.name}`);
       else ok('预设内注入行：wpac-persona → dsh-wpac/inject');
-      if (!fs.existsSync(path.join(root, 'lib', 'inject5.js'))) bad('缺少 lib/inject5.js（人格注入实现）');
+      if (!fs.existsSync(path.join(root, 'lib', 'inject6.js'))) bad('缺少 lib/inject6.js（人格注入实现）');
       else {
-        const lib = read('lib/inject5.js');
-        if (!lib.includes("agent/created")) bad('lib/index.js 没有监听 agent/created');
+        const lib = read('lib/inject6.js');
         if (!lib.includes("name: 'wpac:protocol'")) bad('section 调用缺少 name（宿主会拒绝）');
         if (!lib.includes('personaText()')) bad('section 的 text 不是每轮现读 persona.md（改文案就必须重启）');
         if (!lib.includes('ctx.systemPrompt')) bad('注入插件没有直接用 ctx.systemPrompt（预设级注入）');
         if (!lib.includes("inject = ['systemPrompt']")) bad('注入插件缺少 inject 声明（Cordis 会拒绝读 systemPrompt）');
+        if (!lib.includes('FALLBACK')) bad('注入插件没有兜底人格（persona.md 丢失会变无人格）');
         else ok('人格注入插件：预设内直接注册 system prompt 段');
       }
       if (!fs.existsSync(path.join(root, 'persona.md'))) bad('缺少 persona.md');
