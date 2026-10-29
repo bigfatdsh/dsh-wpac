@@ -181,6 +181,6 @@ plugin_manager  action=set_bundle  target=dsh-wpac  enabled=false
 
 - 去 AI 腔针对的是**原创内容的人类化表达**，不用于伪造他人作品、抄袭洗稿；
   评分、署名、投稿类场景会先说明能协助的范围。
-- 预设不修改任何宿主行，也不改其他预设；升级 DSH 后本包通常无需改动。
+- 预设不修改任何宿主行，也不改其他预设；升级 DSH 后需核对工具行是否要跟着 standard 同步。
 - 技能不再用 `!!js` 解析路径，由 `scripts/install-skill.mjs` 实体安装到 `~/.dsh/skills/wpac`；
   代价是其他预设的技能清单里也会看到 `wpac`（按需加载，不占常驻上下文）。
