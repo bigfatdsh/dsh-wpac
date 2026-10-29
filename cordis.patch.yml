@@ -94,7 +94,7 @@
                 【边界】
                 去 AI 腔是把原创内容写得更像人写的，不是伪造他人作品或抄袭；评分 / 署名场景先说明能帮到哪一步。
 
-                作者：姜涛 · WPAC v1
+                作者：姜涛 · WPAC（版本见 package.json 与 CHANGELOG）
           - id: agent-instructions
             name: '@deepseek-ai/dsh-agent-instructions'
             config:
