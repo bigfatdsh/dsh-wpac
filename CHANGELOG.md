@@ -1,5 +1,14 @@
 # 更新记录
 
+## 1.3.1 — 2026-10-29
+
+- **修「加载失败」**：预设里 `compaction` 组只 isolate 了 `compaction`，`delegation` 组完全没 isolate，
+  registry 注册时判定服务泄漏，报 `Preset services require isolate realms: toolResultPruner, workflowEngine`，
+  界面显示「加载失败」。补上 `toolResultPruner: true` 与 `workflowEngine: true` 后注册通过。
+- 自检脚本新增「服务隔离完整」检查（含 tool-result-pruner / workflow-ptc 的组必须有对应 isolate），
+  这类失败以后装之前就能拦住。
+- 验证方式：隔离 profile 起一个探针插件打印 `agentPresets.list()`，`wpac` 行不再带 `broken` 字段。
+
 ## 1.3.0 — 2026-10-29
 
 - 排查「界面看不到 WPAC」：预设声明来自 bundle 层，只在**新建会话**时可选，已开会话不能切换；
