@@ -117,7 +117,7 @@ function collectJs(node, out = []) {
 }
 if (patch) {
   const exprs = collectJs(patch);
-  if (exprs.length === 0) bad('补丁里没有 !!js 表达式（预期至少有一条 customSkillDirs）');
+  if (exprs.length === 0) ok('补丁不含 !!js 表达式（纯静态声明，注册环节最少）');
   let compiled = 0;
   for (const expr of exprs) {
     try {
@@ -129,7 +129,7 @@ if (patch) {
   }
   if (exprs.length > 0 && compiled === exprs.length) ok(`!!js 表达式 ${compiled} 条均可编译`);
   const skillExpr = exprs.find((expr) => expr.includes('skills'));
-  if (!skillExpr) bad('找不到 customSkillDirs 的 !!js 表达式');
+  if (!skillExpr) checks.push('  - 跳过：没有技能目录表达式（技能走默认根目录）');
   else {
     try {
       const baseUrl = pathToFileURL(path.join(profileDir, 'package.json')).href;
@@ -165,6 +165,9 @@ if (fs.existsSync(path.join(root, 'LICENSE')) && !read('LICENSE').includes('姜�
 }
 if (fs.existsSync(path.join(root, 'templates', 'profile.md'))) ok('长期设定模板存在');
 else bad('缺少 templates/profile.md');
+const installedSkill = path.join(process.env.DSH_HOME || path.join(process.env.HOME || '', '.dsh'), 'skills', 'wpac', 'SKILL.md');
+if (fs.existsSync(installedSkill)) ok(`技能已装进默认根目录：${installedSkill}`);
+else bad(`技能还没装进默认根目录（跑 node scripts/install-skill.mjs）：${installedSkill}`);
 
 // ---- 5. 与现有预设不重名 ---------------------------------------------------
 const profileCordis = path.join(profileDir, 'cordis.yml');
@@ -208,7 +211,8 @@ if (profileDoc) {
     }
   };
   collect(patch?.[0]?.insert?.find((r) => r.id === 'preset-wpac')?.config?.plugins);
-  if (unknown.length) bad(`这些插件名在既有预设里没出现过，可能有笔误：${unknown.join(', ')}`);
+  if (known.size === 0) checks.push('  - 跳过：profile 里没有内联预设行（预设来自 bundle 层，无法比对）');
+  else if (unknown.length) bad(`这些插件名在既有预设里没出现过，可能有笔误：${unknown.join(', ')}`);
   else ok('插件名与既有预设计一致（无新增依赖）');
 }
 
