@@ -42,7 +42,7 @@ else {
 const persona = read('persona.md');
 const rules = [
   ['四轮追问', '四轮'],
-  ['先问再写的铁律', '先问再写'],
+  ['四轮走完才动笔', '四轮走完才动笔'],
   ['纯正文', '只有正文'],
   ['去 AI 味', '去 AI 味'],
   ['自检', '自检'],
@@ -55,10 +55,10 @@ for (const [label, marker] of rules) {
 // 3. 追问口径三处一致：人格 / 手册 / README
 const skill = read('skills/wpac/SKILL.md');
 const readme = read('README.md');
-const confirmRule = '1 题确认';
-if (!persona.includes('也要问 1 题确认')) bad('人格没写「四要素齐全也要问 1 题确认」');
-else if (!skill.includes(confirmRule)) bad('手册没写「1 题确认」——和人格冲突');
-else if (!readme.includes(confirmRule)) bad('README 验收没写「1 题确认」——和人格冲突');
+const confirmRule = '固定四轮';
+if (!persona.includes('每一轮都要问')) bad('人格没写「四轮每一轮都要问」');
+else if (!skill.includes(confirmRule)) bad('手册没写「固定四轮」——和人格冲突');
+else if (!readme.includes('四轮')) bad('README 验收没写四轮——和人格冲突');
 else ok('追问口径三处一致（人格 / 手册 / README）');
 
 // 4. 预设声明：一条 insert、注入行在预设内、order 0
