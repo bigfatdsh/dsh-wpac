@@ -23,10 +23,10 @@ W / P / A / C 四要素，缺什么就带选项追问，补齐后把委托重写
 ```
 dsh-wpac/
 ├── package.json           # bundle 声明：dsh.bundle.patch → cordis.patch.yml
-├── cordis.patch.yml       # 两条 insert：preset-wpac（工具面）+ wpac-persona（宿主级注入）
+├── cordis.patch.yml       # 一条 insert：preset-wpac（工具面 + wpac-persona 子插件）
 ├── lib/inject6.js         # 预设内插件：把 persona.md 挂进 agent 的 system prompt（文件名带版本号，见下）
 ├── persona.md             # 人格段正文（唯一真源）
-├── skills/wpac/SKILL.md   # 深度手册（判定表/选项库/约束清单/模板/例句/评分表）
+├── skills/wpac/SKILL.md   # 深度手册（判定表/选项库/约束清单/模板/例句/产出前清单）
 ├── templates/profile.md   # 长期设定模板（可选，复制到工作区 wpac/profile.md）
 ├── scripts/verify.mjs     # 装前自检
 ├── scripts/install-skill.mjs  # 把 skills/wpac 装进 ~/.dsh/skills/wpac
@@ -39,7 +39,7 @@ dsh-wpac/
 
 三层分工，改东西只动对应那一层：
 
-1. **人格层**（`cordis.patch.yml` 的 `persona.prefix`）：常驻上下文，只放铁律与流程，
+1. **人格层**（`persona.md`，由 `lib/inject6.js` 每轮现读）：常驻上下文，只放铁律与流程，
    越短越好。改流程、改默认值、改自检项，改这里。
 2. **手册层**（`skills/wpac/SKILL.md`）：按需加载，放长内容。加模板、加例句、加选项库，
    改这里，不动人格。
@@ -124,6 +124,12 @@ node scripts/publish-github.mjs             # 推到 bigfatdsh/dsh-wpac
 即便预设暂时选不到，也还能用：技能已装进 `~/.dsh/skills/wpac`，
 任何会话里说「用 wpac」或直接 `skill wpac` 就能加载同一套手册。
 
+## 更新后为什么要重启
+
+预设里挂了一行 `wpac-persona → dsh-wpac/inject`，它直接引用本包。`plugin_manager` 会把这类
+"预设内直接引用本包"的插件判为 unmanaged，装/卸都会回 `restart-required`。
+所以：**改完重装一次 + 重启一次 App** 才保证新代码生效；只改 `persona.md` 不用——它每轮现读。
+
 ## 卸载 / 停用
 
 ```
@@ -140,8 +146,8 @@ plugin_manager  action=set_bundle  target=dsh-wpac  enabled=false
 
 | 想改什么 | 改哪里 | 注意 |
 | --- | --- | --- |
-| 追问规则、流程、默认值 | `persona.prefix` | 别超过 ~3.5k 字，常驻上下文 |
-| 模板、例句、约束清单、评分表 | `skills/wpac/SKILL.md` | 加载才占上下文，可放心写长 |
+| 追问规则、流程、默认值 | `persona.md` | 改完立即生效；别超过 ~3.5k 字 |
+| 模板、例句、约束清单、产出前清单 | `skills/wpac/SKILL.md` | 加载才占上下文，可放心写长 |
 | 加一个要素（如 E=证据） | 人格段 + 手册 + 自检表 | 三处都改，否则模型会漏 |
 | 增删工具 | `plugins` 列表 | 先从 `standard` 抄；新增行先查会不会与宿主重复 |
 | 改显示名/描述/排序 | `config.name` / `description` / `order` | 描述里保留作者 |
@@ -166,5 +172,5 @@ plugin_manager  action=set_bundle  target=dsh-wpac  enabled=false
 - 去 AI 腔针对的是**原创内容的人类化表达**，不用于伪造他人作品、抄袭洗稿；
   评分、署名、投稿类场景会先说明能协助的范围。
 - 预设不修改任何宿主行，也不改其他预设；升级 DSH 后本包通常无需改动。
-- 技能目录通过 `!!js` 按 bundle 自身路径解析；若包名被改（`package.json` 的 `name`），
-  需同步改 `cordis.patch.yml` 里的 `resolve('dsh-wpac/package.json')`。
+- 技能不再用 `!!js` 解析路径，由 `scripts/install-skill.mjs` 实体安装到 `~/.dsh/skills/wpac`；
+  代价是其他预设的技能清单里也会看到 `wpac`（按需加载，不占常驻上下文）。
