@@ -105,11 +105,12 @@ if (patch) {
       if (!injector) bad('缺少宿主级注入行 wpac-persona');
       else if (injector.name !== 'dsh-wpac/inject') bad(`wpac-persona 行应指向 dsh-wpac/inject，实际是 ${injector.name}`);
       else ok('宿主级注入行：wpac-persona → dsh-wpac');
-      if (!fs.existsSync(path.join(root, 'lib', 'inject2.js'))) bad('缺少 lib/inject2.js（人格注入实现）');
+      if (!fs.existsSync(path.join(root, 'lib', 'inject3.js'))) bad('缺少 lib/inject3.js（人格注入实现）');
       else {
-        const lib = read('lib/inject2.js');
+        const lib = read('lib/inject3.js');
         if (!lib.includes("agent/created")) bad('lib/index.js 没有监听 agent/created');
         if (!lib.includes("name: 'wpac:protocol'")) bad('section 调用缺少 name（宿主会拒绝）');
+        if (!lib.includes('personaText()')) bad('section 的 text 不是每轮现读 persona.md（改文案就必须重启）');
         else ok('人格注入插件：监听 agent/created，注册 system prompt 段');
       }
       if (!fs.existsSync(path.join(root, 'persona.md'))) bad('缺少 persona.md');
@@ -117,7 +118,7 @@ if (patch) {
         const prefix = read('persona.md');
         if (prefix.length < 800) bad('persona.md 太短，四要素与流程写不全');
         else ok(`persona.md：${prefix.length} 字`);
-        for (const marker of ['W 我是', 'P 要什么', 'A 给谁', 'C 约束', '一次只问一个', '只有正文', '自检 7 条', '口语化', '废话', '姜涛']) {
+        for (const marker of ['W 我是', 'P 要什么', 'A 给谁', 'C 约束', '固定四轮', '只有正文', '自检 7 条', '口语化', '废话', '姜涛']) {
           if (!prefix.includes(marker)) bad(`persona.md 缺少段落标记：${marker}`);
         }
       }
