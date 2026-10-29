@@ -61,6 +61,17 @@ else if (!skill.includes(confirmRule)) bad('手册没写「固定四轮」——
 else if (!readme.includes('四轮')) bad('README 验收没写四轮——和人格冲突');
 else ok('追问口径三处一致（人格 / 手册 / README）');
 
+// 3.5 手册里不许再出现与「固定四轮」冲突的旧口径
+for (const stale of ['≤4 题', '2 题）', '一题确认']) {
+  if (skill.includes(stale)) bad(`手册里还有旧口径「${stale}」，与「固定四轮、一轮一题」冲突`);
+}
+if (!skill.includes('一轮 1 题')) bad('手册工具矩阵没写「一轮 1 题」');
+else ok('手册无旧口径残留（≤4 题 / 一题确认）');
+
+// 3.6 无人可问的兜底
+if (!persona.includes('无人可问')) bad('人格缺少「无人可问」兜底（子代理/批量会卡死）');
+else ok('人格含「无人可问」兜底');
+
 // 4. 预设声明：一条 insert、注入行在预设内、order 0
 const patch = read('cordis.patch.yml');
 if (!patch.includes("- id: wpac-persona")) bad('预设里没有 wpac-persona 注入行');
