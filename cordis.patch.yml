@@ -19,6 +19,9 @@
         description: 'W(我是)/P(要什么)/A(给谁看)/C(约束)：先补全四要素、列选项追问，再极致优化提示词并自检交付。作者：姜涛'
         order: 0
         plugins:
+          # 人格注入挂在预设里：预设插件会挂进 agent 上下文，早于第一次 prompt 组装。
+          - id: wpac-persona
+            name: 'dsh-wpac/inject'
           - id: agent-instructions
             name: '@deepseek-ai/dsh-agent-instructions'
             config:
@@ -108,10 +111,3 @@
               searchTimeoutMs: 60000
           - id: present
             name: '@deepseek-ai/dsh-tool-present'
-
-# 宿主级人格注入：预设里的 persona 行在 agent 挂载时会被部署级人格覆盖，
-# 所以改成 agent/created 时按 agentPreset 判会话，给 wpac 会话挂 system prompt 段。
-# 人格文本在 persona.md（与 preset 声明解耦，改文案只改那一个文件）。
-- insert:
-    - id: wpac-persona
-      name: 'dsh-wpac/inject'
