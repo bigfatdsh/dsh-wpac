@@ -1,5 +1,20 @@
 # 更新记录
 
+## 2.5.1 — 2026-11-07（修「设置里显示加载失败」）
+
+- 根因：预设的 `plugins` 是 `standard` 的静态克隆，克隆体停在 0.2.1 之前。0.2.2-rc.1 里
+  `@deepseek-ai/dsh-tool-subagent-control` 不再导出 `./list-agents`，`dsh-tool-subagent` 的配置键
+  也从 `modelSelectionSettings` 拆成 `modelSelection` / `modelDiscovery`。于是预设里那行
+  `tool-subagent-list-agents` 永远起不来，registry 报
+  `tool-subagent-list-agents (@deepseek-ai/dsh-tool-subagent-control/list-agents): never started`，
+  设置页把整张卡标成「加载失败」。其余 6 个预设由宿主自己声明，所以只有 wpac 挂。
+- 修复：跑 `scripts/adapt-tools.mjs --write` 从当前 App 的 `standard.patch.yml` 重新同步工具面
+  （22 行不变；`delegation` 分组删掉 `list-agents` 那行，`tool-subagent` 换成新配置键）。
+- `scripts/verify.mjs`：新增第 7 组检查，直接跑 `adapt-tools.mjs` 比对，工具面落后就报红；
+  yaml 加载在没有 `yaml` 包时回退 `js-yaml`（原先误报「找不到 yaml 包」，还连带跳过两条检查）。
+- 验证：用隔离的 `DSH_HOME` 把 desktop 的 29 个 bundle 全量装进副本启动，registry 名册里 7 个预设
+  全部 `broken: null`，wpac 人格段注册成功（persona.md 2413 字节）。
+
 ## 2.5.0 — 2026-10-29
 
 - **工具面自动跟宿主**：新增 `scripts/adapt-tools.mjs`。它从装的 DSH 里读
