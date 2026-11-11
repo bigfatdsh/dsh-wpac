@@ -27,8 +27,24 @@ const warns = [];
 if (opt.min && han < opt.min) fails.push(`字数 ${han} < 下限 ${opt.min}`);
 if (opt.max !== Infinity && han > opt.max) fails.push(`字数 ${han} > 上限 ${opt.max}`);
 
-const bushi = count(/不是/g);
-if (bushi > opt.maxBushi) fails.push(`「不是」${bushi} 处（上限 ${opt.maxBushi}）`);
+const fanan = count(/不是[^。！？\n]{0,20}[，,]\s*(是|而是)/g)
+  + count(/算不上[^。！？\n]{0,20}(只是|就是)/g)
+  + count(/与其说[^。！？\n]{0,20}不如说/g)
+  + count(/不在于[^。！？\n]{0,20}而在于/g);
+if (fanan > 0) fails.push(`翻案句 ${fanan} 处（不是…是 / 算不上…只是 / 与其说…不如说）`);
+
+const duizhang = count(/的是[^。！？\n]{0,15}[，,][^。！？\n]{0,15}的是/g);
+if (duizhang > 0) fails.push(`对仗 ${duizhang} 处（A 的是…，B 的是…）`);
+
+const women = count(/我们/g);
+if (women > 2) fails.push(`「我们」${women} 次（上限 2）`);
+
+const yasuo = count(/不算新闻|不算什么|不过如此/g);
+if (yasuo > 0) warns.push(`压缩句 ${yasuo} 处（不算新闻 / 不算什么 / 不过如此）`);
+
+const tail = paras.slice(-2).join('');
+const hedge = (tail.match(/大概率|也许|或许/g) || []).length;
+if (hedge > 0) warns.push(`结尾含糊 ${hedge} 处（大概率 / 也许 / 或许）`);
 
 const meta = count(/所谓|说穿了|这意味着|这说明/g);
 if (meta > 0) fails.push(`自我注解 ${meta} 处（所谓 / 说穿了 / 这意味着）`);
