@@ -499,3 +499,10 @@ description: WPAC 模式的深度手册：四要素判定标准、追问选项�
 5. **总说 + 分说的地方，逗号该改冒号吗？**
 6. **结尾是点题 / 动作，还是总结升华？** 总结就改。
 7. **硬要求逐条对了吗？** 字数、禁项、选题、细节来源、截止——漏一条就重写那一条。
+
+### 输出前 gate（必做）
+
+1. 草稿写 `/tmp/wpac-draft.txt`。
+2. `node ~/.dsh/skills/wpac/scripts/preflight.mjs --min <下限> --max <上限> /tmp/wpac-draft.txt`
+3. 红了按提示改，改完再跑；全绿再发。
+4. preflight 只管字数和机械句式；金句、对仗、判断收尾，按 §13 和 `references/中文AI味清单.md` 人工过。
