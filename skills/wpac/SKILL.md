@@ -506,3 +506,4 @@ description: WPAC 模式的深度手册：四要素判定标准、追问选项�
 2. `node ~/.dsh/skills/wpac/scripts/preflight.mjs --min <下限> --max <上限> /tmp/wpac-draft.txt`
 3. 红了按提示改，改完再跑；全绿再发。
 4. preflight 只管字数和机械句式；金句、对仗、判断收尾，按 §13 和 `references/中文AI味清单.md` 人工过。
+5. 去金句 pass：挑 3 句最像「文章」的（对仗、格言、压缩句、「我们…他…」），改成事实 / 动作 / 原话；改完再跑 preflight，全文金句 ≤1。
