@@ -3,13 +3,14 @@
 # 这个 bundle 只做一件事：向 profile 的 Loader 列表插入一行预设声明。
 #   * 不动任何既有预设 / 宿主行，避免上游升级时静默漂移；
 #   * 预设 id = wpac，界面上显示为「wpac模式」；
-#   * 工具面克隆自 standard（已验证可激活）；人格由预设内的 wpac-persona 子插件注入
-#     （读 persona.md），技能由 scripts/install-skill.mjs 实体安装到 ~/.dsh/skills。
+#   * 工具面克隆自 standard（由 scripts/adapt-tools.mjs 同步，别手改）；
+#     人格由预设内的 wpac-persona 子插件注入（读 persona.md），
+#     技能由 scripts/install-skill.mjs 实体安装到 ~/.dsh/skills。
 #     宿主机上已启用的插件（univer / sd / memory / computer-use …）由宿主上下文继承。
 #   * 预设内直接引用本包，装/卸都会回 restart-required，改完要重启一次 App。
 #
-# 修改提示词请只改 persona.md 与 skills/wpac/SKILL.md，
-# 改完跑 `node scripts/verify.mjs` 再装。
+# 修改提示词请只改 persona.md 与 skills/wpac/SKILL.md，改完跑 node scripts/verify.mjs 再装。
+# DSH 升级后先跑 node scripts/adapt-tools.mjs --write 再 verify。
 
 - insert:
     - id: preset-wpac
@@ -36,6 +37,9 @@
             disabled: !!js process.platform !== 'win32'
           - id: tool-fs
             name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              # Set false to drop the apply_patch tool beside edit.
+              applyPatch: false
           - id: tool-fs-search
             name: '@deepseek-ai/dsh-tool-fs-search'
             config:
@@ -98,14 +102,13 @@
             config:
               - id: tool-subagent-control
                 name: '@deepseek-ai/dsh-tool-subagent-control'
-              - id: tool-subagent-list-agents
-                name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
               - id: tool-subagent
                 name: '@deepseek-ai/dsh-tool-subagent'
                 config:
                   provider: spawn
                   toolName: subagent
-                  modelSelectionSettings: true
+                  modelSelection: true
+                  modelDiscovery: true
               - id: tool-subagent-fork
                 name: '@deepseek-ai/dsh-tool-subagent'
                 config:
@@ -132,7 +135,7 @@
             name: '@deepseek-ai/dsh-tool-present'
           - id: tool-plugin-manager
             name: '@deepseek-ai/dsh-plugin-manager/tools'
-            disabled: true
+            disabled: !!js "!ctx.get('profileContext')"
           - id: tool-plugin-market
             name: '@deepseek-ai/dsh-plugin-market/tools'
             disabled: true
