@@ -116,9 +116,13 @@ node scripts/publish-github.mjs             # 推到 bigfatdsh/dsh-wpac
    node scripts/verify.mjs                      # 声明/人格/技能是否完整
    ```
    再看 `plugin_manager` 的 `list_plugins`，`preset-wpac` 应为 `enabled: true`、`fiberPhase: active`。
-4. 卡片上写「**加载失败**」→ 预设里的服务没有 isolate（registry 报
-   `Preset services require isolate realms: …`）。1.3.1 已修 `toolResultPruner` / `workflowEngine`
-   两处，`scripts/verify.mjs` 现在会静态拦住这类问题。
+4. 卡片上写「**加载失败**」→ 设置页会把坏在哪一行写出来，按这句分两种：
+   - `Preset services require isolate realms: …`：预设里的服务没隔离（1.3.1 已修
+     `toolResultPruner` / `workflowEngine`，`scripts/verify.mjs` 静态拦）。
+   - `…: never started`：这一行是 `standard` 后来才加/改的（例如 0.2.2 起把
+     subagent 工具收进 `delegation` 分组并加 `workflowEngine` 隔离），克隆体停在旧版本。
+     跑 `node scripts/adapt-tools.mjs --write` 重新同步工具面 → `node scripts/verify.mjs` → 重启 App。
+     （2.5.1 修的就是这一种。）
 5. 都正常但还是不显示 → 多半是界面缓存，重开 App 即可。
 
 即便预设暂时选不到，也还能用：技能已装进 `~/.dsh/skills/wpac`，
