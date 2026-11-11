@@ -5,6 +5,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -36,15 +37,29 @@ if (pkg) {
 
 // ---- 2. YAML 解析（允许 !!js 自定义标签）-----------------------------------
 const require = createRequire(import.meta.url);
+function adapt(mod) {
+  // `yaml` 自带 customTags；`js-yaml` 用 Type 扩 schema。统一成 .parse(text)。
+  if (typeof mod.parse === 'function') return mod;
+  const schema = mod.DEFAULT_SCHEMA.extend([
+    new mod.Type('tag:yaml.org,2002:js', { kind: 'scalar', construct: (s) => ({ js: s }) }),
+  ]);
+  return { parse: (text) => mod.load(text, { schema }) };
+}
 function loadYaml() {
-  const candidates = [
-    'yaml',
-    path.join(process.env.DSH_PROFILE_DIR || '', 'node_modules', 'yaml'),
-    path.join(process.env.DSH_HOME || '', 'profiles', 'desktop', 'node_modules', 'yaml'),
+  const homes = [
+    '',
+    process.env.DSH_PROFILE_DIR || '',
+    path.join(process.env.DSH_HOME || '', 'profiles', 'desktop'),
   ];
+  const candidates = [];
+  for (const home of homes) {
+    for (const pkg of ['yaml', 'js-yaml']) {
+      candidates.push(home ? path.join(home, 'node_modules', pkg) : pkg);
+    }
+  }
   for (const candidate of candidates) {
     try {
-      return require(candidate);
+      return adapt(require(candidate));
     } catch {
       /* 试下一个 */
     }
@@ -299,6 +314,21 @@ try {
   else ok(`技能目录可解析：${skillDir}`);
 } catch (error) {
   bad(`customSkillDirs 表达式解析失败（dsh-wpac 尚未装进 profile？）：${error.message}`);
+}
+
+// ---- 7. 工具面与当前 standard 同步（升级 DSH 后最容易悄悄过期的地方）------
+try {
+  execFileSync(process.execPath, [path.join(root, 'scripts', 'adapt-tools.mjs')], {
+    stdio: 'pipe',
+    env: { ...process.env, DSH_PROFILE_DIR: profileDir },
+  });
+  ok('预设工具面与当前 DSH 的 standard 一致');
+} catch (error) {
+  if (error?.status === 1) {
+    bad('预设工具面落后于当前 DSH 的 standard（会导致设置里「加载失败」）：跑 node scripts/adapt-tools.mjs --write');
+  } else {
+    checks.push('  - 跳过：读不到当前 DSH 的 standard（未安装 App 或路径不同）');
+  }
 }
 
 // ---- 输出 -----------------------------------------------------------------
