@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 
 const argv = process.argv.slice(2);
-const opt = { min: 0, max: Infinity, maxBushi: 1, maxJiu: 2 };
+const opt = { min: 0, max: Infinity, maxBushi: 1, maxJiu: 2, noDetails: false };
 let file = '-';
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
@@ -12,6 +12,7 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === '--max') opt.max = Number(argv[++i]);
   else if (a === '--max-bushi') opt.maxBushi = Number(argv[++i]);
   else if (a === '--max-jiu') opt.maxJiu = Number(argv[++i]);
+  else if (a === '--no-details') opt.noDetails = true;
   else if (!a.startsWith('--')) file = a;
 }
 
@@ -45,6 +46,26 @@ if (yasuo > 0) warns.push(`压缩句 ${yasuo} 处（不算新闻 / 不算什么 
 const tail = paras.slice(-2).join('');
 const hedge = (tail.match(/大概率|也许|或许/g) || []).length;
 if (hedge > 0) warns.push(`结尾含糊 ${hedge} 处（大概率 / 也许 / 或许）`);
+
+const push = (msg) => (opt.noDetails ? fails : warns).push(msg);
+
+const actions = count(/我(站了|站了挺久|翻开|翻到|走到|看见|看到|摸了摸|回头|坐|坐不住|掏出|拿出|跟着|走进|出了展馆|回到宿舍|回到|路过|读了)/g);
+if (actions > 0) push(`第一人称具体动作 ${actions} 处（用户没给就删）`);
+
+const exhibit = count(/工作证|成绩单|作业本|红笔|展板|展柜|模型|奖章|奖状/g);
+if (exhibit > 0) push(`具体展品 ${exhibit} 处（用户没给就改概括）`);
+
+const quote = count(/他说[，,：:]/g);
+if (quote > 0) push(`真人引语 ${quote} 处（必须核对原文，查不到就转述）`);
+
+const selfFact = count(/我[^。！？\n]{0,12}(抄|挂科|拖到|没交|作弊|拖延)/g);
+if (selfFact > 0) push(`自己的事 ${selfFact} 处（用户没说就删）`);
+
+const cnNum = count(/[一二三四五六七八九十百千万零两〇]+(岁|年|个|项|届|位|多)/g);
+if (cnNum > 5) push(`中文数字 ${cnNum} 处（确认来源）`);
+
+const facts = count(/\d{4}\s*年|\d+\s*(岁|个|项|届|年)/g);
+if (facts > 6) push(`具体数字 ${facts} 处（确认来源，≤4 更好）`);
 
 const meta = count(/所谓|说穿了|这意味着|这说明/g);
 if (meta > 0) fails.push(`自我注解 ${meta} 处（所谓 / 说穿了 / 这意味着）`);
