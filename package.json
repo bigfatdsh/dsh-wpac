@@ -25,7 +25,8 @@
     "tests",
     "README.md",
     "CHANGELOG.md",
-    "LICENSE"
+    "LICENSE",
+    ".gitignore"
   ],
   "dsh": {
     "bundle": {
