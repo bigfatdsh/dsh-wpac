@@ -1,5 +1,12 @@
 # 更新记录
 
+## 2.6.0 — 2026-11-12（C 轮 C1→C6 闭环 + 注入模块重构）
+
+- C 轮补充循环写死到 C6：C3 进 C4、C4 进 C5、C5 进 C6；C6 是上限，不再给「继续补充」，只留「没有了 / 其他」；每轮都 multi_select。
+- lib/inject6.js 重构：SECTION 常量、loadPersonaText（可注入 readFile）、registerPersona（返回是否挂上，deps 注入 logger / load）、apply 只做转发；行为不变（每轮现读 persona.md、失败只 warn 不抛）。
+- verify 的热读断言改为检查 `text: () =>` 与 `loadPersonaText`；单测跑通（persona 4028 字、section name/order、坏 ctx 返回 false）。
+- 实测：C4→C5（6 项，含「进入 C6」）→C6（6 项，只留没有了 / 其他，multi_select=true）。
+
 ## 2.5.9 — 2026-11-12（C 轮拆成 C1/C2/C3，C3 起强制「继续补充」）
 
 - C 不再一次问完：C1 形式（字数 / 格式 / 标题 / 落款）→ C2 内容（细节来源 / 禁项 / 必含 / 人称 / 口语度）→ C3 提交与检测（截止 / 渠道 / 查重 / AI 率 / 参考资料）。
