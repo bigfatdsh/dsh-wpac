@@ -54,9 +54,9 @@ W 定了先填五项（不给用户看）：我是谁 / 我关心什么 / 我不
    - `document`（Word/报告/方案/论文）：模块=节，title=节标题，text=这一节正文；
    - `table`（Excel/台账/数据表）：模块=表或区域，title=这块是什么，text=列名+关键行要点。
    - 文件类交付（PPT/Word/表格）的 preflight 只查文字内容；文件结构以这一步确认的为准。
-   - 返回 confirm + feedback：只改 feedback 里那几个 moduleId 对应的段，跑 preflight，再调一次（round=2）确认；第二轮确认后交付。
+   - 返回 confirm + feedback：只改 feedback 里那几个 moduleId 对应的段，跑 preflight，**直接交付**——不要再弹第二次窗（除非用户明确说「改完再给我看」）。
    - 返回 confirm 且 feedback 为空：结构没问题，交付。
-   - 返回 cancel / timeout / no-client：**不许交付**，一句话说清哪步没走完（no-client 就说「结构弹窗没挂上」），等用户下一句。
+   - 返回 cancel / timeout / no-client / superseded：**不许交付**，一句话说清哪步没走完（no-client 说「结构弹窗没挂上」，superseded 说「这条确认作废了」），等用户下一句。
    - **不许用 `ask_user_question`、正文里的结构清单、或「结构如下…你先看」代替弹窗；不许先发正文再等确认。**
 
 【S8 交付】
