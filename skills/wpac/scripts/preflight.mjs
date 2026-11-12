@@ -64,6 +64,12 @@ if (selfFact > 0) push(`自己的事 ${selfFact} 处（用户没说就删）`);
 const cnNum = count(/[一二三四五六七八九十百千万零两〇]+(岁|年|个|项|届|位|多)/g);
 if (cnNum > 5) push(`中文数字 ${cnNum} 处（确认来源）`);
 
+const zuowen = count(/话没听清几句|日子照过|有一样我记住了|够得着归够得着|词还是那些词|回来写这个|耳朵起茧|心里没什么动静|听着不热闹|再往下说|又是另一回事|变了个人|才明白|才懂|现在再想/g);
+if (zuowen > 0) fails.push(`作文腔 ${zuowen} 处（话没听清几句 / 日子照过 / 归…归 / 词还是那些词…）`);
+
+const planMeta = count(/字数大概|需要加|可以加一段|不能编|禁止|写到这里|现在写下来/g);
+if (planMeta > 0) fails.push(`规划 / 元叙事漏进正文 ${planMeta} 处`);
+
 const personal = count(/实验|课设|社团|班干部|比赛|挂科|宿舍|食堂|早八|课表|作业/g);
 if (personal > 0) push(`个人经历词 ${personal} 处（用户没给就删）`);
 
