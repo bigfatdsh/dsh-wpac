@@ -136,7 +136,7 @@ const standardPlugins = extractStandardPlugins(found.text);
 const ours = extractOurs(fs.readFileSync(PATCH, 'utf8'));
 
 // 本包保留的第一行（注入插件），其余由 standard 覆盖
-const keep = ['- id: wpac-persona', "  name: 'dsh-wpac/inject'"];
+const keep = ['- id: wpac-persona', "  name: 'dsh-wpac/inject'", '- id: wpac-review-tools', "  name: 'dsh-wpac/tools'"];
 const merged = [...keep, ...standardPlugins];
 
 const indent = ' '.repeat(ours.childIndent);
@@ -156,7 +156,7 @@ if (same) {
 const oursIds = new Set(ours.body.map((l) => l.match(/^\s*- id: (\S+)/)?.[1]).filter(Boolean));
 const stdIds = new Set(standardPlugins.map((l) => l.match(/^\s*- id: (\S+)/)?.[1]).filter(Boolean));
 const added = [...stdIds].filter((id) => !oursIds.has(id));
-const removed = [...oursIds].filter((id) => id !== 'wpac-persona' && !stdIds.has(id));
+const removed = [...oursIds].filter((id) => !['wpac-persona', 'wpac-review-tools'].includes(id) && !stdIds.has(id));
 console.log(`宿主有、本包没有：${added.join(', ') || '（无）'}`);
 console.log(`本包有、宿主没有：${removed.join(', ') || '（无）'}`);
 
