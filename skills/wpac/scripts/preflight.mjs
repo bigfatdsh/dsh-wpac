@@ -82,6 +82,9 @@ if (bang > 1) warns.push(`感叹号 ${bang} 个（≤1）`);
 const aph = count(/就是|其实是|不过是|才是|更像是|说白了/g);
 if (aph > 3) warns.push(`判断 / 金句候选 ${aph} 处（>3，人工看）`);
 
+const filler = count(/说起来|其实|说实话|说白了|我一开始|那时候|后来才|现在想起来|反正|你看|怎么说呢/g);
+if (filler < 3) warns.push(`口语连接 / 废话 ${filler} 处（<3，可能太紧）`);
+
 const jiu = paras.map((p) => (p.match(/就/g) || []).length);
 const jiuMax = Math.max(0, ...jiu);
 if (jiuMax > opt.maxJiu) fails.push(`单段「就」${jiuMax} 个（上限 ${opt.maxJiu}）`);
