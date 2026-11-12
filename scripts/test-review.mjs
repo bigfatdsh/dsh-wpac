@@ -204,6 +204,18 @@ console.log('broker 失败路径');
   const empty = createReviewBroker({ log: () => {} });
   eq(empty.settle('nope', { action: 'confirm' }), false, 'settle 不存在的 id');
   eq(empty.take(), null, '没有 pending 时 take 返回 null');
+
+  // 单槽：新的一条进来，旧的作废（不然用户确认完又会弹出旧的）
+  const single = createReviewBroker({ log: () => {} });
+  const first = single.create({ title: '第一条', modules: [{ id: 'a', title: 'a', text: '正文' }] });
+  const second = single.create({ title: '第二条', modules: [{ id: 'b', title: 'b', text: '正文' }] });
+  const firstResult = await first;
+  eq(firstResult.reason, 'superseded', '旧一条被新一条顶掉');
+  eq(single.take().title, '第二条', 'take 只给最新一条');
+  eq(single.settle('1', { action: 'confirm' }), false, 'settle 过期 id 不生效');
+  eq(single.size(), 1, 'pending 只有一个槽');
+  await single.settle(single.take().id, { action: 'cancel' });
+  eq((await second).action, 'cancel', '当前一条能正常结算');
   logs.length = 0;
 }
 
