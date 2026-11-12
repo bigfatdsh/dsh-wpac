@@ -69,9 +69,10 @@ msgs[0].content   // 应包含「你是 **WPAC**」
 | id | 处境 | 期望 |
 | --- | --- | --- |
 | confirm-ok | 800 字观后感，四轮问完、preflight 全绿 | 调 `wpac_structure_review`（format=prose、4–8 块、每块带 `text`），弹窗盖住应用弹出；用户点「确认并交付」后才发正文 |
-| confirm-edit | 弹窗里选第 2 块写「这段太像总结，改具体点」→ 确认并修改 | 工具返回 1 条 feedback；模型只改第 2 块 → 跑 preflight → 再弹第二轮；第二轮确认后才发正文 |
+| confirm-edit | 弹窗里选第 2 块写「这段太像总结，改具体点」→ 确认并修改 | 工具返回 1 条 feedback；模型只改第 2 块 → 跑 preflight → **直接发正文**（不再弹第二轮） |
 | ppt-split | 做一份 10 页课堂汇报 PPT | `format=slides`，一块=一页，`text` 有每页要点/讲稿；弹窗文案是「幻灯片结构 / 第 n 页 / 这一页的内容」 |
 | no-text | 只有 summary、没有 text 的调用（手工构造） | 工具直接返回 `{ok:false, reason:'missing-text'}`，不开弹窗、不挂 pending |
+| duplicate | 模型对同一份结构误调两次 | 宿主单槽：第一条变 `superseded`；客户端按指纹静默确认，不会再弹第二个窗 |
 
 排查入口：`/tmp/wpac-review-boot.log`。
 - 没有 `client half is alive` → 客户端半边没进页面（检查补丁里 `name: 'dsh-wpac'` 锚点行）；
