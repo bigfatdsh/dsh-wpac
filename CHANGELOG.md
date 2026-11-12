@@ -1,5 +1,42 @@
 # 更新记录
 
+## 0.4.1 — 2026-11-12（底色跟主题 + 正文必填 + PPT/Word/表格结构适配）
+
+- 「内容结构」区底色：不再用 `bg-overlay`（它本来是叠层色，大面积铺会发灰，暗色主题下更离题），改成 `color-mix(前景色 4%)` 的淡分区 + `7%` 做小标签底；明暗两套都只是一层很轻的层次，不再抢眼。
+- 正文看不了：根因是模块 schema 里 `text` 只是可选，模型基本不给。现在 `text` 进 `required`，宿主 `execute` 再校验一次——缺正文直接返回 `{ ok:false, reason:'missing-text', message:'…缺哪几块…' }`，不开弹窗、不挂 pending；弹窗详情里缺正文也用警示色写明。
+- PPT / Word / 表格适配：工具新增 `format`（prose / slides / document / table），不给就按 `kind` 猜；弹窗文案整套跟着换——PPT 按页（第 n 页 / 这一页的内容）、Word 按节、表格按区域，表头加格式标签。persona 规则 5 与技能 §7.5 各补一套按文件类型拆模块的写法（PPT 一页一分钟、Word 按标题层级、Excel 按表/区域 + 列名口径）。
+- 诊断：每次开结构确认写一行 `review start: #id kind=… format=… modules=N withText=M` 到 `/tmp/wpac-review-boot.log`，不用猜是不是模型没给正文。
+- 测试/自检同步：format 推断、text 必填、缺正文打回、4000 字限长都有断言；verify 补 FORMAT_META / color-mix / 硬编码颜色检查（`var(--token, #fff)` 的兜底色豁免）。
+
+## 0.4.0 — 2026-11-12（选中模块看正文 + 两半边拆层重构）
+
+- 弹窗右侧改成两态：默认「结构总览」（按交付顺序的模块卡片流），点左侧任意模块 / 点卡片就切成这个模块的**详细内容**——序号、标题、作用标签、这块要干的事（summary）、这一段草稿正文（text）、这段上挂的待改意见；右上角「← 结构总览」退回。`text` 字段由 `wpac_structure_review` 新增透传（每块最多 4000 字，persona 规则 5 与技能 §7.5 都要求「照原文贴，不许摘要」）。
+- 宿主半边拆成三层，`lib/inject6.js` 只剩转发：
+  · `lib/persona.js` —— 人格段（name / inject / apply + registerPersona，行为不变）；
+  · `lib/review.js` —— `createReviewBroker`（纯 pending 队列，可单测）+ `createEndpointHandler` + `createTool` + `registerReview` 接线；
+  · `lib/tools.js` —— 只做 Cordis 插件壳，import 换到 `./review.js`。
+  入口文件名 `inject6.js` 不动（预设行 `dsh-wpac/inject` 是契约）。
+- 浏览器半边按职责分区：设计令牌 → 文案 → 纯函数 → 样式 → store → 传输（POST/轮询）→ 组件（模块行 / 结构总览 / 模块详情 / 编辑栏 / 确认条 / 右侧两态 / 弹窗 / toast）→ 插件面；结构卡片和模块行不再用 `<button>` 套块级节点，改 div role=button；全局 ⌘/Ctrl+Enter 不再抢文本框。
+- `scripts/test-review.mjs` 跟着补：`text` 透传与 4000 字限长、`clampText` / `cleanFeedback` 纯函数、宿主 import 改到 review.js。`scripts/verify.mjs` 加架构检查（persona.js 存在且内容齐、inject6.js 只转发、review.js 四件套齐全、tools.js 指向 review.js）。
+
+## 0.3.7 — 2026-11-12（弹窗改用 DSH 设计 token，跟随明暗主题）
+
+- 之前弹窗自己写死了白底 / #2563eb / 灰色字：暗色主题下页面文字变成浅色，压在写死的浅底上，序号和标签看着是白的。现在颜色全部走 `--dsw-alias-*`（`bg-layer-1` / `bg-overlay` / `label-primary|secondary|tertiary` / `border-l1|l2` / `button-info-fill|hover` / `bg-mask-3` / `label-on-color` / `label-primary-inverted`），`body[data-ds-dark-theme]` 一切换就自动换色。
+- 强调色从硬编码的 `#2563eb` 换成 DSH 自己的品牌蓝（按钮 `button-info-fill`，hover `button-info-hover`），背板用 `bg-mask-3`，卡片/标签用 `bg-overlay` + `border-l2`，选中态用 `color-mix(品牌蓝 10%)`。
+- 确认键补 hover 态；toast 用 `label-primary` 反色底，明暗两套都读得清。
+- 序号（左侧模块序号、右侧结构轨道序号）改成「底 = bg-overlay、字 = label-secondary / 品牌蓝」，不再出现白字白底。
+
+## 0.3.6 — 2026-11-12（弹窗真正进页面：补 Loader 锚点行 + 换成 shell.overlay 全屏弹窗）
+
+- 根因：DSH 的客户端模块系统只扫描「Loader 行引用到的包」的 `dsh.client`。本包原来只有预设声明行，没有任何 `name: 'dsh-wpac'` 的行 → `lib/client.js` 永远不被页面加载，工具只能返回 `{"ok":false,"reason":"no-client"}`。补一行 `wpac-client`（空 apply）后客户端半边才被登记；`lib/index.js` 改成空宿主半边（不能转发 inject6，否则人格会泄漏到所有会话）。
+- 弹窗挪到 `shell.overlay`：盖住整个应用的全屏弹窗（背板 + 1120×760 面板），不再挂在输入框旁边的小格子里。
+- UI 重做：左 380px 固定编辑栏（模块列表 + 意见输入 + 待提交意见条 + 左下蓝色确认键），右侧按交付顺序画结构卡片（序号轨道 + 标题 + 角色标签 + 摘要 + 待改条目）。单行文本 nowrap+ellipsis、多行 line-clamp、全链 min-width:0，避免文字/模块重叠。
+- 交互：意见可跨模块累积（最多 24 条、每条 2000 字），⌘/Ctrl+Enter 加入意见，Esc / × = 取消（不确认）；确认键文案随意见条数变（确认并交付 / 确认并修改（n））。
+- 流程：工具带回 round；按 feedback 改完、跑 preflight，再弹第二轮（最多两轮）。cancel / timeout / no-client 一律不许交付，persona 规则 5 与「自检 10 条」同步改。20s 无 poll 判 no-client，用户思考上限 10 分钟；工具参数与 feedback 全部 clamp 限长。
+- 诊断：客户端挂上 `shell.overlay` 后回一条 `?hello=1` beacon，宿主写 `/tmp/wpac-review-boot.log`（`client half is alive` / `modal slot registered`），不用点一次交付就知道弹窗注册成没成。
+- 新增 `scripts/test-review.mjs`：离线跑两半边契约（模块 id / slot / 轮询 / confirm→feedback / cancel / 参数限长），不连页面、不起服务。
+- `scripts/verify.mjs` 加第 8 段：`dsh.client` / `exports["./client"]` / 模块 id 等于包名 / 挂 `shell.overlay` / 补丁里有 `name: 'dsh-wpac'` 锚点行，缺一个就 FAIL。
+
 ## 0.3.5 — 2026-11-12（工具注册：补 output 声明）
 
 - 诊断日志定位：`wpac-review-tools` 行已执行，`tools` / `webServer` 就绪，端点 `/dsh-wpac-review` 已挂（HTTP 200），但工具注册报 `must declare output { schema, render, presentationMeta? }`。
