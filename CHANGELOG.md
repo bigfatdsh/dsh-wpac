@@ -1,5 +1,11 @@
 # 更新记录
 
+## 0.3.4 — 2026-11-12（结构确认成为真正的预设工具）
+
+- 之前 wpac-persona 动态注册，agent 的工具表里看不到 `wpac_structure_review`，模型只能用 ask_user_question；现在加独立工具行 `wpac-review-tools`（`dsh-wpac/tools`），工具和端点由这一行注册，预设工具面保留它（adapt-tools 不再覆盖）。
+- 删除 ask_user_question 兜底：没有工具就停下告诉用户，不许交付，也不许拿提问代替。
+- verify / smoke 全过；工具面与 standard 一致（自定义行保留）。
+
 ## 0.3.3 — 2026-11-12（强制结构确认 + C3/C4 继续补充）
 
 - S7 结构确认改为强制：有 `wpac_structure_review` 用工具，没有就用 `ask_user_question` 发模块确认题；用户没确认不许交付。
