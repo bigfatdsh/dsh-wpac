@@ -1,6 +1,6 @@
 {
   "name": "dsh-wpac",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "private": true,
   "type": "module",
   "description": "WPAC agent preset: W(我是) / P(要什么) / A(给谁) / C(约束) prompt engineering for DSH. Author: 姜涛.",
@@ -50,6 +50,7 @@
     ".": "./lib/index.js",
     "./inject": "./lib/inject6.js",
     "./client": "./lib/client.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./tools": "./lib/tools.js"
   }
 }
