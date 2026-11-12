@@ -1,5 +1,11 @@
 # 更新记录
 
+## 0.3.2 — 2026-11-12（修 wpac 预设加载失败）
+
+- 原因：wpac-persona 在预设上下文里直接取 webServer，取不到会抛错，预设被标「加载失败」；现在整个结构确认注册包在 try/catch 里，失败只 warn，不影响人格和预设。
+- 客户端从 `conversation.composer.dock` 换到 `conversation.input.right`（已知存在的槽），避免槽不存在导致加载失败。
+- 单元测试：ctx.get 抛错时 apply 不抛（1 条 warn）；有 webServer / tools 时能注册端点 /dsh-wpac-review 与工具 wpac_structure_review。
+
 ## 0.3.1 — 2026-11-12（结构确认弹窗内置 wpac）
 
 - 删除独立插件 dsh-wpac-review（bundle + 目录）；不设独立按钮。
