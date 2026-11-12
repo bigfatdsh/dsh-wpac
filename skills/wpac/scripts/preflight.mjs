@@ -70,6 +70,9 @@ if (zuowen > 0) fails.push(`作文腔 ${zuowen} 处（话没听清几句 / 日�
 const planMeta = count(/字数大概|需要加|可以加一段|不能编|禁止|写到这里|现在写下来/g);
 if (planMeta > 0) fails.push(`规划 / 元叙事漏进正文 ${planMeta} 处`);
 
+const imagined = count(/大红花|胸前.{0,4}花|证书|站在台上|台上笑|领奖台/g);
+if (imagined > 0) push(`想象画面 ${imagined} 处（用户没给就删）`);
+
 const personal = count(/实验|课设|社团|班干部|比赛|挂科|宿舍|食堂|早八|课表|作业/g);
 if (personal > 0) push(`个人经历词 ${personal} 处（用户没给就删）`);
 
