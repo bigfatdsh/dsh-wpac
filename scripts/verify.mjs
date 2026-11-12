@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import os from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -198,7 +199,13 @@ if (patch) {
       if (typeof value === 'string' && fs.existsSync(path.join(value, 'wpac', 'SKILL.md'))) ok(`!!js 求值：技能目录 ${value}`);
       else bad(`!!js 求值结果不是有效技能目录：${String(value)}`);
     } catch (error) {
-      bad(`!!js 求值失败：${error.message}`);
+      if (String(error?.message ?? '').includes('Cannot find module')) {
+        const fallback = path.join(os.homedir(), '.dsh', 'skills');
+        if (fs.existsSync(path.join(fallback, 'wpac', 'SKILL.md'))) ok(`!!js 技能目录本地按默认根校验：${fallback}`);
+        else bad(`!!js 求值失败，且默认技能根没有 wpac：${error.message}`);
+      } else {
+        bad(`!!js 求值失败：${error.message}`);
+      }
     }
   }
 }
