@@ -1,5 +1,11 @@
 # 更新记录
 
+## 0.3.5 — 2026-11-12（工具注册：补 output 声明）
+
+- 诊断日志定位：`wpac-review-tools` 行已执行，`tools` / `webServer` 就绪，端点 `/dsh-wpac-review` 已挂（HTTP 200），但工具注册报 `must declare output { schema, render, presentationMeta? }`。
+- 给 `wpac_structure_review` 补 `output: { schema, render }`；单测确认 spec.output.schema 存在、render 是函数。
+- 重启后日志应出现 `tool registered: wpac_structure_review`；当前会话工具表是旧的，要开新 wpac 会话才看得到。
+
 ## 0.3.4 — 2026-11-12（结构确认成为真正的预设工具）
 
 - 之前 wpac-persona 动态注册，agent 的工具表里看不到 `wpac_structure_review`，模型只能用 ask_user_question；现在加独立工具行 `wpac-review-tools`（`dsh-wpac/tools`），工具和端点由这一行注册，预设工具面保留它（adapt-tools 不再覆盖）。
