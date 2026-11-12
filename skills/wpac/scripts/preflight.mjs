@@ -64,6 +64,12 @@ if (selfFact > 0) push(`自己的事 ${selfFact} 处（用户没说就删）`);
 const cnNum = count(/[一二三四五六七八九十百千万零两〇]+(岁|年|个|项|届|位|多)/g);
 if (cnNum > 5) push(`中文数字 ${cnNum} 处（确认来源）`);
 
+const personal = count(/实验|课设|社团|班干部|比赛|挂科|宿舍|食堂|早八|课表|作业/g);
+if (personal > 0) push(`个人经历词 ${personal} 处（用户没给就删）`);
+
+const unhuman = count(/离[^。！？\n]{0,10}很远|离[^。！？\n]{0,10}不远|算个意外|的账|验收人|颗粒度|底层逻辑|闭环|抓手|范式|复用|对齐|问不接/g);
+if (unhuman > 0) fails.push(`不像人话 ${unhuman} 处（离…很远 / 算个意外 / 的账 / 验收人…）`);
+
 const facts = count(/\d{4}\s*年|\d+\s*(岁|个|项|届|年)/g);
 if (facts > 6) push(`具体数字 ${facts} 处（确认来源，≤4 更好）`);
 
