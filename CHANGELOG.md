@@ -1,5 +1,13 @@
 # 更新记录
 
+## 0.3.1 — 2026-11-12（结构确认弹窗内置 wpac）
+
+- 删除独立插件 dsh-wpac-review（bundle + 目录）；不设独立按钮。
+- wpac 内置：wpac-persona 注册 `wpac_structure_review` 工具 + `/dsh-wpac-review` 端点；客户端在 `conversation.composer.dock` 轮询，有 pending 就弹窗。
+- 弹窗：右侧模块网格，左侧编辑栏（模块列表 + 修改意见 + 蓝色确认），跟随系统明暗（`--dsw-alias-*`），系统字体，flex/overflow 防文字覆盖。
+- S7 自检后调工具；用户 feedback 按 moduleId 改对应段再跑 preflight；取消 / 超时按原稿交付。
+- verify / smoke 全过；UI 视觉未能在本机自动验证（浏览器 / 桌面工具只支持 Windows）。
+
 ## 0.3.0 — 2026-11-12（架构：persona 收成八段管线）
 
 - persona 从 100 行、18 条散规则 + 口语化 / 去 AI 味 / 铁律 / 流程 / 自检 多个重复块，收成 8 段：S1 加载 / S2 问 / S3 角色卡 / S4 语料路由 / S5 写 / S6 改三遍 / S7 闸 / S8 交付；每段自带硬规则，重复块删除，标记全保留。
