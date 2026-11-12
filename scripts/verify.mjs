@@ -150,6 +150,10 @@ if (patch) {
         const clientSrc = read('lib/client.js');
         if (!clientSrc.includes('FORMAT_META')) bad('client.js 缺少 FORMAT_META（PPT/Word/表格的弹窗文案不匹配）');
         if (!clientSrc.includes('color-mix')) bad('client.js 的底色没有跟主题走（应 color-mix 前景色做淡淡的分区）');
+        if (!clientSrc.includes('gridTemplateRows')) bad('左栏没用 grid 固定行（上下会互相挤/遮挡）');
+        if (!clientSrc.includes('lastConfirmedSignature')) bad('client.js 缺少同内容去重（模型多调一次会再弹一遍）');
+        if (!clientSrc.includes('COPY.guide')) bad('弹窗缺少引导条');
+        if (/关闭（不确认）|aria-label:\s*'关闭'/.test(clientSrc)) bad('弹窗还有 × 关闭键（应去掉，只留确认）');
         // var(--token, #fff) 里的兜底色不算硬编码；其余十六进制颜色必须来自令牌。
         const withoutFallbacks = clientSrc.replace(/var\(--dsw-alias-[a-z0-9-]+\s*,\s*#[0-9a-fA-F]{3,8}\)/g, 'var(--token)');
         if (/#[0-9a-fA-F]{6}\b|#fff\b/.test(withoutFallbacks)) bad('client.js 出现硬编码颜色（必须走 --dsw-alias-* 令牌）');
