@@ -121,9 +121,10 @@ if (patch) {
       if (!injector) bad('预设里缺少注入插件行 wpac-persona');
       else if (injector.name !== 'dsh-wpac/inject') bad(`wpac-persona 行应指向 dsh-wpac/inject，实际是 ${injector.name}`);
       else ok('预设内注入行：wpac-persona → dsh-wpac/inject');
-      if (!fs.existsSync(path.join(root, 'lib', 'inject6.js'))) bad('缺少 lib/inject6.js（人格注入实现）');
+      const personaSrc = path.join(root, 'lib', 'persona.js');
+      if (!fs.existsSync(personaSrc)) bad('缺少 lib/persona.js（人格注入实现）');
       else {
-        const lib = read('lib/inject6.js');
+        const lib = read('lib/persona.js');
         if (!lib.includes("name: 'wpac:protocol'")) bad('section 调用缺少 name（宿主会拒绝）');
         if (!/text:\s*\(\)\s*=>/.test(lib) || !lib.includes('loadPersonaText')) bad('section 的 text 不是每轮现读 persona.md（改文案就必须重启）');
         if (!lib.includes('ctx.systemPrompt')) bad('注入插件没有直接用 ctx.systemPrompt（预设级注入）');
@@ -131,12 +132,35 @@ if (patch) {
         if (!lib.includes('FALLBACK')) bad('注入插件没有兜底人格（persona.md 丢失会变无人格）');
         else ok('人格注入插件：预设内直接注册 system prompt 段');
       }
+      // 入口文件是契约：预设行指向 dsh-wpac/inject，必须能拿到 apply。
+      const entrySrc = read('lib/inject6.js');
+      if (!/export\s*\{[^}]*apply[^}]*\}\s*from\s*'\.\/persona\.js'/.test(entrySrc)) {
+        bad('lib/inject6.js 应只做转发（export { name, inject, apply } from \'./persona.js\'）');
+      } else ok('入口 lib/inject6.js 只做转发，人格实现在 persona.js');
+      if (!fs.existsSync(path.join(root, 'lib', 'review.js'))) bad('缺少 lib/review.js（结构确认实现）');
+      else {
+        const review = read('lib/review.js');
+        for (const marker of ['createReviewBroker', 'createEndpointHandler', 'createTool', 'registerReview']) {
+          if (!review.includes(marker)) bad(`lib/review.js 缺少 ${marker}`);
+        }
+        if (!review.includes('text: clampText')) bad('结构模块没有把正文 text 传给浏览器（右侧详情会空）');
+        else if (!review.includes("required: ['id', 'title', 'text']")) bad('模块 schema 没把 text 设成必填（模型会省掉，右侧看不到正文）');
+        else if (!review.includes('FORMATS') || !review.includes('inferFormat')) bad('review.js 缺少交付物格式（prose/slides/document/table）适配');
+        else ok('结构确认实现：review.js 的 broker/端点/工具分层齐全');
+        const clientSrc = read('lib/client.js');
+        if (!clientSrc.includes('FORMAT_META')) bad('client.js 缺少 FORMAT_META（PPT/Word/表格的弹窗文案不匹配）');
+        if (!clientSrc.includes('color-mix')) bad('client.js 的底色没有跟主题走（应 color-mix 前景色做淡淡的分区）');
+        // var(--token, #fff) 里的兜底色不算硬编码；其余十六进制颜色必须来自令牌。
+        const withoutFallbacks = clientSrc.replace(/var\(--dsw-alias-[a-z0-9-]+\s*,\s*#[0-9a-fA-F]{3,8}\)/g, 'var(--token)');
+        if (/#[0-9a-fA-F]{6}\b|#fff\b/.test(withoutFallbacks)) bad('client.js 出现硬编码颜色（必须走 --dsw-alias-* 令牌）');
+      }
+      if (!read('lib/tools.js').includes("from './review.js'")) bad('lib/tools.js 应引入 ./review.js');
       if (!fs.existsSync(path.join(root, 'persona.md'))) bad('缺少 persona.md');
       else {
         const prefix = read('persona.md');
         if (prefix.length < 800) bad('persona.md 太短，四要素与流程写不全');
         else ok(`persona.md：${prefix.length} 字`);
-        for (const marker of ['W 我是', 'P 要什么', 'A 给谁', 'C 约束', '四轮', '只有正文', '自检 9 条', '语料路由', '加载 wpac 技能', 'AI 味红线', '中文AI味清单', 'preflight', '去金句', 'C1 形式', '继续补充', '人话测试', '反作文腔', '管线', '口语化', '废话', '姜涛']) {
+        for (const marker of ['W 我是', 'P 要什么', 'A 给谁', 'C 约束', '四轮', '只有正文', '自检 10 条', '语料路由', '加载 wpac 技能', 'AI 味红线', '中文AI味清单', 'preflight', '去金句', 'C1 形式', '继续补充', '人话测试', '反作文腔', '管线', '口语化', '废话', '姜涛']) {
           if (!prefix.includes(marker)) bad(`persona.md 缺少段落标记：${marker}`);
         }
       }
@@ -233,11 +257,10 @@ try {
   if (missing.length) bad(`package.json 指向的文件不存在：${missing.join(', ')}`);
   else ok(`入口与导出目标 ${targets.length} 个，文件都存在`);
   const entry = read('lib/index.js');
-  const relay = entry.match(/from '\.\/([^']+)'/);
-  if (relay && !fs.existsSync(path.join(root, 'lib', relay[1]))) {
-    bad(`lib/index.js 转发的 ${relay[1]} 不存在`);
-  } else if (relay) {
-    ok(`lib/index.js 转发目标存在：${relay[1]}`);
+  if (/export\s+function\s+apply\s*\(/.test(entry) && !/export\s+\*\s+from/.test(entry)) {
+    ok('lib/index.js 是空宿主半边（只当客户端的 Loader 锚点）');
+  } else {
+    bad('lib/index.js 必须保持空 apply：它会被 profile Loader 当独立插件加载，转发 inject6 会把 wpac 人格泄漏到所有会话');
   }
 } catch (error) {
   bad(`检查入口失败：${error.message}`);
@@ -339,6 +362,43 @@ try {
 }
 
 // ---- 输出 -----------------------------------------------------------------
+// ---- 8. 浏览器半边（结构确认弹窗）要真的会进页面 ---------------------------
+try {
+  const pkgNow = JSON.parse(read('package.json'));
+  const client = pkgNow.dsh?.client;
+  if (!client || client.platform !== 'web') bad('package.json 缺 dsh.client.platform=web：客户端半边不会被加载');
+  else ok('dsh.client.platform = web');
+
+  const exportRel = pkgNow.exports?.['./client'];
+  if (!exportRel) bad('package.json 缺 exports["./client"]');
+  else if (!fs.existsSync(path.join(root, exportRel))) bad(`exports["./client"] 指向的文件不存在：${exportRel}`);
+  else ok(`客户端入口：${exportRel}`);
+
+  const clientCode = read(exportRel || 'lib/client.js');
+  const idm = clientCode.match(/__ModuleLoader__\.load\(\{\s*id:\s*'([^']+)'/);
+  if (!idm) bad('客户端入口不是 __ModuleLoader__.load({ id, factory }) 形式');
+  else if (idm[1] !== pkgNow.name) bad(`客户端模块 id（${idm[1]}）必须等于包名 ${pkgNow.name}`);
+  else ok(`客户端模块 id = ${pkgNow.name}`);
+  if (!/shell\.overlay/.test(clientCode)) bad('弹窗没挂到 shell.overlay（挂 conversation.input.right 弹不出来）');
+  else ok('弹窗挂在 shell.overlay');
+
+  // 关键：Loader 里必须有以包名命名的一行，客户端模块系统才扫得到这个包。
+  const names = [];
+  const walk = (node) => {
+    if (Array.isArray(node)) { for (const item of node) walk(item); return; }
+    if (!node || typeof node !== 'object') return;
+    if (typeof node.name === 'string') names.push(node.name);
+    for (const value of Object.values(node)) walk(value);
+  };
+  walk(patch);
+  const anchors = names.filter((name) => name === pkgNow.name);
+  if (!anchors.length) bad(`cordis.patch.yml 里没有 name: '${pkgNow.name}' 的 Loader 行：客户端半边永不加载（0.3.6 前弹窗出不来的根因）`);
+  else if (anchors.length > 1) bad(`name: '${pkgNow.name}' 的 Loader 行重复 ${anchors.length} 次，删掉多余的`);
+  else ok(`Loader 锚点行：name: '${pkgNow.name}'`);
+} catch (error) {
+  bad(`检查浏览器半边失败：${error.message}`);
+}
+
 console.log(`dsh-wpac 自检（${root}）`);
 console.log(checks.join('\n'));
 if (failures.length) {
