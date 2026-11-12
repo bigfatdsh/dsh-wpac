@@ -24,7 +24,12 @@ W / P / A / C 四要素，缺什么就带选项追问，补齐后把委托重写
 dsh-wpac/
 ├── package.json           # bundle 声明：dsh.bundle.patch → cordis.patch.yml
 ├── cordis.patch.yml       # 一条 insert：preset-wpac（工具面 + wpac-persona 子插件）
-├── lib/inject6.js         # 预设内插件：把 persona.md 挂进 agent 的 system prompt（文件名带版本号，见下）
+├── lib/index.js           # 空宿主半边：profile Loader 的 `dsh-wpac` 锚点行，只为让客户端半边被扫到
+├── lib/inject6.js         # 预设内入口（文件名义契约）：只转发行 persona.js
+├── lib/persona.js         # 人格段：注册 system prompt section（每轮现读 persona.md）
+├── lib/review.js          # 结构确认：pending 队列 + /dsh-wpac-review 端点 + wpac_structure_review 工具
+├── lib/tools.js           # 预设内插件行：把 review.js 接到 Cordis（tools / webServer）
+├── lib/client.js          # 浏览器半边：shell.overlay 里的结构确认弹窗（左编辑栏 + 右结构/详情）
 ├── persona.md             # 人格段正文（唯一真源）
 ├── skills/wpac/SKILL.md   # 深度手册（判定表/选项库/约束清单/模板/例句/产出前清单）
 ├── templates/profile.md   # 长期设定模板（可选，复制到工作区 wpac/profile.md）
@@ -39,7 +44,7 @@ dsh-wpac/
 
 三层分工，改东西只动对应那一层：
 
-1. **人格层**（`persona.md`，由 `lib/inject6.js` 每轮现读）：常驻上下文，只放铁律与流程，
+1. **人格层**（`persona.md`，由 `lib/persona.js` 每轮现读）：常驻上下文，只放铁律与流程，
    越短越好。改流程、改默认值、改自检项，改这里。
 2. **手册层**（`skills/wpac/SKILL.md`）：按需加载，放长内容。加模板、加例句、加选项库，
    改这里，不动人格。
@@ -53,7 +58,7 @@ dsh-wpac/
 
 ```
 cordis.patch.yml（预设 wpac）
-   └── plugins[0] wpac-persona → dsh-wpac/inject → lib/inject6.js
+   └── plugins[0] wpac-persona → dsh-wpac/inject → lib/inject6.js → lib/persona.js
           └── ctx.systemPrompt.section({ name:'wpac:protocol', order:10, text })
                  └── persona.md（每轮现读，改文案不用重启）
 ```
@@ -67,7 +72,17 @@ cordis.patch.yml（预设 wpac）
    要读会话里真正发给模型的 system 消息：`agent.session.deriveMessages()` 的第一条，
    里面出现「你是 **WPAC**」才算挂上。
 
-`lib/inject6.js` 文件名带版本号是刻意的：ESM 按 URL 缓存，改实现要换文件名才能重装即生效。
+`lib/inject6.js` 这个入口名是契约（预设行指向 `dsh-wpac/inject`，exports 也指它）。ESM 按 URL 缓存，真要换实现就换它转发的文件，入口别动。
+
+## 结构确认弹窗（交付前强制）
+
+交付前最后一步：模型调 `wpac_structure_review`，在**当前会话里直接弹出**一个盖住整个应用的弹窗（挂 `shell.overlay`，不依赖外部浏览器）。用户在弹窗里按模块确认，模型才准交付正文。
+
+- **两半边**：宿主 `lib/review.js`（pending 队列 + `/dsh-wpac-review` 端点 + 工具）；浏览器 `lib/client.js`（轮询端点 → 弹窗 → POST 决定）。客户端靠 profile Loader 里那行 `name: 'dsh-wpac'`（`cordis.patch.yml` 的 `wpac-client`）被 DSH 扫到，少了它弹窗永远不出来、工具只会返回 `no-client`。
+- **弹窗**：左侧 380px 编辑栏（模块列表 → 写修改意见 → 左下蓝色确认键）；右侧默认结构总览，点左侧模块切成该模块详情（标题 / 作用 / 摘要 / 正文 `text` / 待改意见）。
+- **按交付物适配**：`format` = `prose`（文字稿按段）/ `slides`（PPT 按页）/ `document`（Word 按节）/ `table`（表格按区域）；不传按 `kind` 猜。每块 `text` 必填，缺了宿主直接打回 `reason=missing-text`，不开弹窗。
+- **轮次**：一次交付最多两轮确认——按 feedback 改完跑 preflight，再弹一轮；`cancel` / `timeout` / `no-client` 一律不许交付。
+- **排障**：`/tmp/wpac-review-boot.log` 里看 `row apply` → `endpoint mounted` → `tool registered` → `client half is alive`（客户端在轮询）→ `modal slot registered`（弹窗槽位挂上）→ `review start: #id kind=… format=… modules=N withText=M`。断在哪一步就知道缺哪半。
 
 ## 安装
 
