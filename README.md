@@ -79,9 +79,10 @@ cordis.patch.yml（预设 wpac）
 交付前最后一步：模型调 `wpac_structure_review`，在**当前会话里直接弹出**一个盖住整个应用的弹窗（挂 `shell.overlay`，不依赖外部浏览器）。用户在弹窗里按模块确认，模型才准交付正文。
 
 - **两半边**：宿主 `lib/review.js`（pending 队列 + `/dsh-wpac-review` 端点 + 工具）；浏览器 `lib/client.js`（轮询端点 → 弹窗 → POST 决定）。客户端靠 profile Loader 里那行 `name: 'dsh-wpac'`（`cordis.patch.yml` 的 `wpac-client`）被 DSH 扫到，少了它弹窗永远不出来、工具只会返回 `no-client`。
-- **弹窗**：左侧 380px 编辑栏（模块列表 → 写修改意见 → 左下蓝色确认键）；右侧默认结构总览，点左侧模块切成该模块详情（标题 / 作用 / 摘要 / 正文 `text` / 待改意见）。
+- **弹窗**：顶部一条引导（① 点模块看正文 ② 写意见 ③ 点蓝色确认）；左侧 380px 用 grid 固定四行（步骤标签 / 模块列表 / 意见编辑 / 确认栏），窗口再矮也不会互相挤；右侧默认结构总览，点左侧模块切成该模块详情（标题 / 作用 / 摘要 / 正文 `text` / 待改意见）。
+- **只有一个确认键**：没有 ×、也没有取消；不写意见直接确认就是交付。同一份结构再送进来（模型多调一次）会被客户端按指纹静默确认，不会再弹第二遍。
 - **按交付物适配**：`format` = `prose`（文字稿按段）/ `slides`（PPT 按页）/ `document`（Word 按节）/ `table`（表格按区域）；不传按 `kind` 猜。每块 `text` 必填，缺了宿主直接打回 `reason=missing-text`，不开弹窗。
-- **轮次**：一次交付最多两轮确认——按 feedback 改完跑 preflight，再弹一轮；`cancel` / `timeout` / `no-client` 一律不许交付。
+- **一轮确认**：按 feedback 改完、跑 preflight 直接交付，不再弹第二轮（除非用户明确要求复看）；`cancel` / `timeout` / `no-client` / `superseded` 一律不许交付。宿主是单槽队列：新的一条进来，旧的自动作废，不会出现「确认完又冒出一个旧弹窗」。
 - **排障**：`/tmp/wpac-review-boot.log` 里看 `row apply` → `endpoint mounted` → `tool registered` → `client half is alive`（客户端在轮询）→ `modal slot registered`（弹窗槽位挂上）→ `review start: #id kind=… format=… modules=N withText=M`。断在哪一步就知道缺哪半。
 
 ## 安装
