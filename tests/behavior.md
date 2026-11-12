@@ -61,3 +61,19 @@ msgs[0].content   // 应包含「你是 **WPAC**」
 - system 消息第一条里同时有 base 人格与「你是 **WPAC**」；
 - 对话按 W → P → A → C 逐轮提问（`w_identity` / `p_purpose` / `a_reader` / 字数约束）；
 - 成品为纯正文 499 字，无小标题、口语化。
+
+## 结构确认（弹窗）回归
+
+交付前必须弹窗，模型不许用聊天里的结构清单代替。下面四条在 wpac 预设会话里跑：
+
+| id | 处境 | 期望 |
+| --- | --- | --- |
+| confirm-ok | 800 字观后感，四轮问完、preflight 全绿 | 调 `wpac_structure_review`（format=prose、4–8 块、每块带 `text`），弹窗盖住应用弹出；用户点「确认并交付」后才发正文 |
+| confirm-edit | 弹窗里选第 2 块写「这段太像总结，改具体点」→ 确认并修改 | 工具返回 1 条 feedback；模型只改第 2 块 → 跑 preflight → 再弹第二轮；第二轮确认后才发正文 |
+| ppt-split | 做一份 10 页课堂汇报 PPT | `format=slides`，一块=一页，`text` 有每页要点/讲稿；弹窗文案是「幻灯片结构 / 第 n 页 / 这一页的内容」 |
+| no-text | 只有 summary、没有 text 的调用（手工构造） | 工具直接返回 `{ok:false, reason:'missing-text'}`，不开弹窗、不挂 pending |
+
+排查入口：`/tmp/wpac-review-boot.log`。
+- 没有 `client half is alive` → 客户端半边没进页面（检查补丁里 `name: 'dsh-wpac'` 锚点行）；
+- 有客户端没有 `modal slot registered` → `shell.overlay` 槽位没挂上；
+- `review start: … withText=0` → 模型没给正文（会被工具打回）。
