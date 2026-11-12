@@ -23,6 +23,8 @@
         plugins:
           - id: wpac-persona
             name: 'dsh-wpac/inject'
+          - id: wpac-review-tools
+            name: 'dsh-wpac/tools'
           - id: agent-instructions
             name: '@deepseek-ai/dsh-agent-instructions'
             config:
