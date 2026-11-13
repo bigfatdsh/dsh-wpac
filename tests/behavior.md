@@ -78,3 +78,15 @@ msgs[0].content   // 应包含「你是 **WPAC**」
 - 没有 `client half is alive` → 客户端半边没进页面（检查补丁里 `name: 'dsh-wpac'` 锚点行）；
 - 有客户端没有 `modal slot registered` → `shell.overlay` 槽位没挂上；
 - `review start: … withText=0` → 模型没给正文（会被工具打回）。
+
+## 文件类（实验性）回归
+
+PDF / PPT / Word / 表格委托，开头必须先问「是否启用文件类 WPAC（实验性）」，选了才走 F1–F5。
+
+| id | 处境 | 期望 |
+| --- | --- | --- |
+| file-ask | 「根据链接做一份微积分复习讲义 PDF」 | **先问**「启用文件类 WPAC（实验性）吗？」两个选项；问之前不生成任何文件（日志里没有 write/office_* 产成品） |
+| file-declined | 同上，用户选「不启用」 | 当普通任务做、不弹结构窗；交付时注明「未启用文件类 WPAC」 |
+| file-enabled | 同上，用户选「启用」 | 问两轮（给谁/解决什么、格式页数模板禁项）→ 拆 4–12 块（format=pdf、每块带 text）→ 弹结构确认 → 改完直接生成 PDF → 文件自检（能打开、页数与结构一致）→ 只给路径 + 一行说明 |
+| file-slides | 「做 20 分钟课堂汇报 PPT」 | format=slides、一页一块、页数 18–23、每页 text 含要点+讲稿；弹窗显示「幻灯片结构 / 第 n 页」 |
+| file-table | 「把这些数据整理成 Excel 台账」 | format=table、一块一张表/区域、text 写列名+口径+示例行 |
