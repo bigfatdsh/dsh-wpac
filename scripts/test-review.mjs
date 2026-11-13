@@ -88,20 +88,25 @@ console.log('浏览器半边（lib/client.js）');
 console.log('宿主半边（lib/review.js: 端点 + 工具）');
 {
   const { registerReview, clampText, cleanFeedback, normalizeReview, inferFormat, createReviewBroker } = await import(pathToFileURL(path.join(root, 'lib/review.js')).href);
-  let endpoint = null;
+  const routes = new Map();
+  const endpointOf = (p) => routes.get(p);
   let tool = null;
   const warns = [];
   const ctx = {
     get: (name) => {
-      if (name === 'webServer') return { register: (route) => { endpoint = route; } };
+      if (name === 'webServer') return { register: (route) => { routes.set(route.path, route); } };
       if (name === 'tools') return { register: (definition) => { tool = definition; } };
       return undefined;
     },
     logger: { warn: (msg) => warns.push(String(msg)) },
   };
   registerReview(ctx);
+  const endpoint = endpointOf('/dsh-wpac-review');
+  const previewRoute = endpointOf('/dsh-wpac-preview');
   if (!endpoint) bad('没有注册 /dsh-wpac-review 端点');
   else { ok('端点已注册：' + endpoint.path); eq(endpoint.kind, 'exact', '端点 kind'); }
+  if (!previewRoute) bad('没有注册 /dsh-wpac-preview 预览图端点');
+  else ok('预览图端点已注册：' + previewRoute.path);
   if (!tool) bad('没有注册 wpac_structure_review 工具');
   else eq(tool.name, 'wpac_structure_review', '工具名');
 
@@ -118,10 +123,20 @@ console.log('宿主半边（lib/review.js: 端点 + 工具）');
     return { status: res.statusCode, body: payload ? JSON.parse(payload) : null };
   };
 
+  // 预览图端点：单独一套假 req/res（响应是二进制）
+  const callPreview = async (url, method = 'GET') => {
+    const req = { method, url };
+    let payload = null;
+    const headers = {};
+    const res = { statusCode: 0, setHeader: (k, v) => { headers[k] = v; }, end: (chunk) => { payload = chunk; } };
+    await previewRoute.handler(req, res);
+    return { status: res.statusCode, headers, payload };
+  };
+
   const args = {
     title: '测试稿', kind: '观后感', round: 1,
     modules: [
-      { id: 'm1', title: '到场', role: '开场', summary: '进门先看到铁家伙', text: '进门之前我以为会看到一屋子奖状。' },
+      { id: 'm1', title: '到场', role: '开场', summary: '进门先看到铁家伙', text: '进门之前我以为会看到一屋子奖状。', preview: '/tmp/wpac-test-preview.png' },
       { id: 'm2', title: '抓手', role: '主体', summary: '抓斗怎么改的', text: '那些铁家伙是抓斗，一个爪子张开合上。' },
     ],
   };
@@ -141,6 +156,8 @@ console.log('宿主半边（lib/review.js: 端点 + 工具）');
   eq(got.body.review && got.body.review.modules.length, 2, 'GET 取到模块数');
   eq(got.body.review && got.body.review.modules[0].text, '进门之前我以为会看到一屋子奖状。', 'GET 取到模块正文（右侧详情用）');
   eq(got.body.review && got.body.review.format, 'prose', 'GET 取到交付物结构类型');
+  eq(got.body.review && got.body.review.modules[0].hasPreview, true, '公开 review 只给 hasPreview 标记');
+  eq(got.body.review && got.body.review.modules[0].preview, undefined, '公开 review 不带本机路径');
   eq(inferFormat('PPT 汇报'), 'slides', 'kind 猜格式：PPT');
   eq(inferFormat('PDF 讲义'), 'pdf', 'kind 猜格式：PDF');
   eq(inferFormat('Excel 台账'), 'table', 'kind 猜格式：Excel');
@@ -152,6 +169,14 @@ console.log('宿主半边（lib/review.js: 端点 + 工具）');
   const itemSchema = tool.parameters.properties.modules.items;
   eq(itemSchema.required, ['id', 'title', 'text'], '模块 schema 必填 text');
   eq(got.body.review && got.body.review.round, 1, 'GET 取到轮次');
+  // 预览图端点：没有真图 → 404；非图片 → 403；不存在 id → 404
+  const noFile = await callPreview('/dsh-wpac-preview?review=' + got.body.review.id + '&module=m1');
+  eq(noFile.status, 404, '预览图文件不存在时 404');
+  const noModule = await callPreview('/dsh-wpac-preview?review=' + got.body.review.id + '&module=nope');
+  eq(noModule.status, 404, '模块对不上时 404');
+  const badReq = await callPreview('/dsh-wpac-preview?review=x&module=m1');
+  eq(badReq.status, 404, 'review 对不上时 404');
+
   const post = await callEndpoint('POST', {
     id: got.body.review.id, action: 'confirm',
     feedback: [{ moduleId: 'm2', moduleTitle: '抓手', instruction: '这一段写具体点' }, { instruction: '' }],
