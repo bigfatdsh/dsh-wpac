@@ -35,7 +35,7 @@ async function waitFor(what, check, timeout = 5000) {
 }
 
 // 1×1 PNG（真文件，给预览端点用）
-const PREVIEW_FILE = '/tmp/wpac-flow-preview.png'
+const PREVIEW_FILE = '/tmp/wpac-flow-preview-object'  // 故意没有扩展名，模拟 DSH 附件对象
 fs.writeFileSync(PREVIEW_FILE, Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
   'base64',
