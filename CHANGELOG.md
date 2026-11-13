@@ -1,5 +1,17 @@
 # 更新记录
 
+## 0.7.1 — 2026-11-13（修「模型没给这一节的预览图」：旧宿主 + 附件路径）
+
+真机现象：弹窗显示「模型没给这一节的预览图」。查日志和会话证据，两处原因：
+
+1. **运行中的宿主还是旧版**：会话工具 schema 里 `format` 只有 prose/slides/document/table、模块没有 `preview` 字段，`review start` 日志也没有 `withPreview=`。模型其实**已经**按新人格传了 `preview`，被旧宿主 normalize 丢掉 → 弹窗只能回退文字。修法：重启 App；同时弹窗加协议版本 `schemaVersion: 2`，旧宿主时提示改成「宿主还是旧版（没重启 App）」，不再误报"模型没给"。
+2. **预览图是附件对象、没有扩展名**：模型给的路径是 `~/.dsh/attachments/v1/objects/...`（PNG 内容、hash 文件名），旧端点只认 `.png` 扩展名 → 直接 403/404。修法：端点改按**文件头嗅探**（PNG/JPEG/GIF/WebP），扩展名只作参考。
+
+另外：
+- 文件类强制预览：每块必须给 `preview`，或显式传 `previewUnavailable: true`（并在 text 写明原因），否则工具打回 `missing-preview`。
+- persona F2.5 与技能参考补上「附件对象路径也能用」「渲染不了怎么声明」。
+- verify 增加 missing-preview / sniffImageType / schemaVersion 检查；契约测试加无扩展名 PNG 的 200 与假图片的 403；全链路测试改用无扩展名路径跑真实往返。
+
 ## 0.7.0 — 2026-11-13（文件类结构弹窗：选中模块显示该页截图）
 
 - 模块新增 `preview`（页面预览图绝对路径）：文件类（PPT/Word/PDF/表格）在 F3 结构确认前先把每块渲染成
