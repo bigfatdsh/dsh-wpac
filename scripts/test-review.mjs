@@ -87,7 +87,7 @@ console.log('浏览器半边（lib/client.js）');
 // ---------- 2. 宿主半边 -----------------------------------------------------
 console.log('宿主半边（lib/review.js: 端点 + 工具）');
 {
-  const { registerReview, clampText, cleanFeedback, normalizeReview, inferFormat, createReviewBroker } = await import(pathToFileURL(path.join(root, 'lib/review.js')).href);
+  const { registerReview, clampText, cleanFeedback, normalizeReview, inferFormat, createReviewBroker, repairPreviewPath } = await import(pathToFileURL(path.join(root, 'lib/review.js')).href);
   const routes = new Map();
   const endpointOf = (p) => routes.get(p);
   let tool = null;
@@ -133,6 +133,9 @@ console.log('宿主半边（lib/review.js: 端点 + 工具）');
     return { status: res.statusCode, headers, payload };
   };
 
+  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  fs.writeFileSync('/tmp/wpac-test-preview.png', PNG);
+
   const args = {
     title: '测试稿', kind: '观后感', round: 1,
     modules: [
@@ -160,6 +163,22 @@ console.log('宿主半边（lib/review.js: 端点 + 工具）');
   const reviewed = await callEndpoint('GET');
   eq(reviewed.body.review.modules[0].hasPreview, true, '无扩展名附件也算有预览');
   eq(reviewed.body.review.schemaVersion, 2, 'review 带协议版本 2');
+  // 路径修复：模拟附件对象被模型漏抄开头两位
+  const dir = '/tmp/wpac-test/objects/ab';
+  fs.mkdirSync(dir, { recursive: true });
+  const hash = 'ab' + 'c'.repeat(62);
+  fs.writeFileSync(`${dir}/${hash}`, PNG);
+  const malformed = `${dir}/${'c'.repeat(62)}`;
+  eq(repairPreviewPath(malformed), `${dir}/${hash}`, '附件对象漏两位能修回来');
+  eq(repairPreviewPath('~/nope.png'), '', '不存在的路径返回空');
+  const repairedReviewRunning = tool.execute({ kind: 'PDF', format: 'pdf', modules: [{ id: 'r1', title: 'x', text: '正文', preview: malformed }] });
+  await sleep(20);
+  const repairedReview = await callEndpoint('GET');
+  eq(repairedReview.body.review.modules[0].hasPreview, true, '修好的路径也算有预览');
+  const repairedImg = await callPreview('/dsh-wpac-preview?review=' + repairedReview.body.review.id + '&module=r1');
+  eq(repairedImg.status, 200, '修好的预览图能取');
+  await callEndpoint('POST', { id: repairedReview.body.review.id, action: 'cancel' });
+  await repairedReviewRunning;
   const okImg = await callPreview('/dsh-wpac-preview?review=' + reviewed.body.review.id + '&module=p1');
   eq(okImg.status, 200, '无扩展名 PNG 端点 200');
   eq(okImg.headers['content-type'], 'image/png', '按内容嗅探的 MIME');
@@ -168,8 +187,10 @@ console.log('宿主半边（lib/review.js: 端点 + 工具）');
   const badRunning = tool.execute({ kind: 'PDF 讲义', format: 'pdf', modules: [{ id: 'p2', title: 'x', text: 'y', preview: badFile, previewUnavailable: false }] });
   await sleep(20);
   const reviewed2 = await callEndpoint('GET');
+  eq(reviewed2.body.review.modules[0].hasPreview, false, '非图片在入口就被挡（hasPreview=false）');
+  eq(reviewed2.body.review.modules[0].previewError, 'not-image', '非图片的错误原因是 not-image');
   const badImg = await callPreview('/dsh-wpac-preview?review=' + reviewed2.body.review.id + '&module=p2');
-  eq(badImg.status, 403, '非图片内容被拒');
+  eq(badImg.status, 404, '入口已挡，端点自然 404');
   await callEndpoint('POST', { id: reviewed2.body.review.id, action: 'cancel' });
   await badRunning;
   eq(noModules.reason, 'no-modules', '空模块时的 reason');
@@ -196,8 +217,8 @@ console.log('宿主半边（lib/review.js: 端点 + 工具）');
   eq(itemSchema.required, ['id', 'title', 'text'], '模块 schema 必填 text');
   eq(got.body.review && got.body.review.round, 1, 'GET 取到轮次');
   // 预览图端点：没有真图 → 404；非图片 → 403；不存在 id → 404
-  const noFile = await callPreview('/dsh-wpac-preview?review=' + got.body.review.id + '&module=m1');
-  eq(noFile.status, 404, '预览图文件不存在时 404');
+  const noFile = await callPreview('/dsh-wpac-preview?review=' + got.body.review.id + '&module=m2');
+  eq(noFile.status, 404, '模块没有预览图时 404');
   const noModule = await callPreview('/dsh-wpac-preview?review=' + got.body.review.id + '&module=nope');
   eq(noModule.status, 404, '模块对不上时 404');
   const badReq = await callPreview('/dsh-wpac-preview?review=x&module=m1');
