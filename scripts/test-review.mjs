@@ -146,6 +146,32 @@ console.log('宿主半边（lib/review.js: 端点 + 工具）');
   eq(rejected.ok, false, '缺 text 时 ok');
   eq(rejected.reason, 'missing-text', '缺 text 时的 reason');
   const noModules = await tool.execute({ modules: [] });
+  // 文件类：没 preview 又没声明渲染不了 → 打回
+  const noPreview = await tool.execute({ kind: 'PPT 汇报', format: 'slides', modules: [{ id: 's1', title: '封面', text: '标题页' }] });
+  eq(noPreview.reason, 'missing-preview', '文件类缺预览图时打回');
+  // 无扩展名附件对象：按内容嗅探也能出图
+  const pngBuf = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  const annex = '/tmp/wpac-test-preview-object';
+  fs.writeFileSync(annex, pngBuf);
+  const badFile = '/tmp/wpac-test-not-image';
+  fs.writeFileSync(badFile, Buffer.from('definitely not an image'));
+  const previewRunning = tool.execute({ kind: 'PDF 讲义', format: 'pdf', modules: [{ id: 'p1', title: '封面', text: '封面页', preview: annex }] });
+  await sleep(20);
+  const reviewed = await callEndpoint('GET');
+  eq(reviewed.body.review.modules[0].hasPreview, true, '无扩展名附件也算有预览');
+  eq(reviewed.body.review.schemaVersion, 2, 'review 带协议版本 2');
+  const okImg = await callPreview('/dsh-wpac-preview?review=' + reviewed.body.review.id + '&module=p1');
+  eq(okImg.status, 200, '无扩展名 PNG 端点 200');
+  eq(okImg.headers['content-type'], 'image/png', '按内容嗅探的 MIME');
+  await callEndpoint('POST', { id: reviewed.body.review.id, action: 'cancel' });
+  await previewRunning;
+  const badRunning = tool.execute({ kind: 'PDF 讲义', format: 'pdf', modules: [{ id: 'p2', title: 'x', text: 'y', preview: badFile, previewUnavailable: false }] });
+  await sleep(20);
+  const reviewed2 = await callEndpoint('GET');
+  const badImg = await callPreview('/dsh-wpac-preview?review=' + reviewed2.body.review.id + '&module=p2');
+  eq(badImg.status, 403, '非图片内容被拒');
+  await callEndpoint('POST', { id: reviewed2.body.review.id, action: 'cancel' });
+  await badRunning;
   eq(noModules.reason, 'no-modules', '空模块时的 reason');
 
   // 第一轮：confirm 且带一条意见
