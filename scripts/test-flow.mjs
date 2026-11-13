@@ -34,14 +34,21 @@ async function waitFor(what, check, timeout = 5000) {
   throw new Error(`等不到：${what}（${timeout}ms）`)
 }
 
+// 1×1 PNG（真文件，给预览端点用）
+const PREVIEW_FILE = '/tmp/wpac-flow-preview.png'
+fs.writeFileSync(PREVIEW_FILE, Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+))
+
 console.log('整条流程（真 HTTP 往返）')
 
 // ---- 1. 用生产代码起端点：registerReview 的接线路径 ------------------------
-let handler = null
+const routes = new Map()
 let toolDef = null
 const ctx = {
   get(name) {
-    if (name === 'webServer') return { register: (route) => { handler = route.handler } }
+    if (name === 'webServer') return { register: (route) => { routes.set(route.path, route) } }
     if (name === 'tools') return { register: (definition) => { toolDef = definition } }
     return undefined
   },
@@ -49,12 +56,19 @@ const ctx = {
 }
 const { registerReview } = await import(pathToFileURL(path.join(root, 'lib/review.js')).href)
 registerReview(ctx)
-if (!handler) bad('端点没注册')
+const reviewRoute = routes.get('/dsh-wpac-review')
+const previewRoute = routes.get('/dsh-wpac-preview')
+if (!reviewRoute) bad('端点没注册')
 else ok('端点注册（review.js → webServer.register）')
 if (!toolDef) bad('工具没注册')
 else eq(toolDef.name, 'wpac_structure_review', '工具名')
 
-const server = http.createServer((req, res) => handler(req, res))
+const server = http.createServer((req, res) => {
+  const path = String(req.url || '/').split('?')[0]
+  const route = path === '/dsh-wpac-preview' ? previewRoute : reviewRoute
+  if (!route) { res.statusCode = 404; res.end('{}'); return }
+  route.handler(req, res)
+})
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
 const base = `http://127.0.0.1:${server.address().port}`
 ok(`本地端点起来：${base}/dsh-wpac-review`)
@@ -116,7 +130,7 @@ const args = {
   format: 'prose',
   round: 1,
   modules: [
-    { id: 'm1', title: '到场，预期落空', role: '开场', summary: '以为奖状墙，先看到铁家伙', text: '进门之前我以为会看到一屋子奖状奖章。' },
+    { id: 'm1', title: '到场，预期落空', role: '开场', summary: '以为奖状墙，先看到铁家伙', text: '进门之前我以为会看到一屋子奖状奖章。', preview: PREVIEW_FILE },
     { id: 'm2', title: '那些铁家伙', role: '主体', summary: '抓斗，卸木材靠人扛', text: '展柜里是抓斗，一个铁爪子张开合上。' },
   ],
 }
@@ -126,6 +140,14 @@ ok(`工具挂 pending → 客户端取到结构（${waited}ms）`)
 eq(lastReview.format, 'prose', '客户端拿到的 format')
 eq(lastReview.modules.length, 2, '客户端拿到的模块数')
 eq(lastReview.modules[0].text, '进门之前我以为会看到一屋子奖状奖章。', '客户端拿到的正文（右侧详情要显示）')
+eq(lastReview.modules[0].hasPreview, true, '客户端知道这一块有预览图')
+const imgRes = await realFetch(`${base}/dsh-wpac-preview?review=${encodeURIComponent(lastReview.id)}&module=m1`)
+const imgBuf = Buffer.from(await imgRes.arrayBuffer())
+eq(imgRes.status, 200, '预览图端点状态')
+eq(imgRes.headers.get('content-type'), 'image/png', '预览图 MIME')
+if (imgBuf.length > 60) ok(`预览图返回 ${imgBuf.length} 字节`)
+else bad('预览图返回内容太小：' + imgBuf.length)
+eq((await realFetch(`${base}/dsh-wpac-preview?review=${encodeURIComponent(lastReview.id)}&module=nope`)).status, 404, '不存在的模块 404')
 
 // 缺正文会被打回、不开 pending
 const rejected = await toolDef.execute({ title: 'x', modules: [{ id: 'a', title: '没正文' }] })
