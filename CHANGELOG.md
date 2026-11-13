@@ -1,5 +1,19 @@
 # 更新记录
 
+## 0.7.0 — 2026-11-13（文件类结构弹窗：选中模块显示该页截图）
+
+- 模块新增 `preview`（页面预览图绝对路径）：文件类（PPT/Word/PDF/表格）在 F3 结构确认前先把每块渲染成
+  PNG（`office_render` 整页 / Word 按节首页 / 表格按区域），弹窗里**选中模块时右侧直接显示这一页的截图**，
+  下面才是文字要点；出不了图自动回退文字并提示。
+- 宿主新增预览图端点 `/dsh-wpac-preview?review=<id>&module=<mid>`：只从当前/最近一份结构的模块里取白名单路径，
+  只认 png/jpg/webp/gif，单张 ≤25MB，响应带 `cache-control: no-store`；确认后最近结构保留 15 分钟，图还能加载。
+  公开 review 只下发 `hasPreview` 标记，本机绝对路径不出宿主。
+- 客户端：详情面板加预览区（`object-fit: contain`、限高 `min(52vh,540px)`、`onError` 回退文字），
+  结构总览不变；`review.display` 继续由宿主下发。
+- persona 增加 F2.5「页面预览（文件类必做）」；技能参考 `references/文件类-WPAC.md` 增加 F2.5 一节（各格式怎么出图、放哪、出不了怎么办）。
+- 测试：契约测试加「公开 review 只给 hasPreview / 不带路径」「预览端点 404 三连」；全链路测试加真 PNG 往返（200 / image/png / 未知模块 404）。
+- verify 增加预览端点、hasPreview、schema preview、client 渲染、persona F2.5 检查。
+
 ## 0.6.0 — 2026-11-13（文件类 WPAC 实验分支：PDF/PPT/Word/表格）
 
 - **文件类纳入 WPAC，但走另一条路**：委托先分流（S1.5）——文字类照旧四轮；文件类（PDF / PPT / Word / Excel / CSV）**开头必须先问**「是否启用文件类 WPAC（实验性）」两个选项，用户没选之前禁止 `write` / `office_*` / 生成文件的 bash 落盘。选「不启用」按普通任务做并注明，不弹窗。
