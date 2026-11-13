@@ -90,7 +90,8 @@
 | 图片/资料页 | 直接复用已有 PNG | 对应页 |
 
 - 图片放 `/tmp/wpac-preview/`（或工作区）下，文件名带序号，例如 `/tmp/wpac-preview/s03.png`；
-- 把**绝对路径**写进模块的 `preview` 字段；`text` 仍然要写（图看不清时看文字）；
+- 把**路径**写进模块的 `preview` 字段；DSH 附件对象路径（`~/.dsh/attachments/...`，没有扩展名）也认，宿主按文件头嗅探 PNG/JPEG/WebP/GIF；`text` 仍然要写（图看不清时看文字）；
+- 文件类**每块都必须有 `preview`**；实在出不了图就传 `previewUnavailable: true` 并在 `text` 写明原因，否则工具返回 `missing-preview` 打回；
 - 出不了图（比如模型没有渲染工具）就留空，弹窗回退到文字，并在交付说明里写一句「本页无预览图」。
 - 预览图只给结构确认用，不进正式交付物。
 
