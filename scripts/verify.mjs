@@ -167,7 +167,7 @@ if (patch) {
         const prefix = read('persona.md');
         if (prefix.length < 800) bad('persona.md 太短，四要素与流程写不全');
         else ok(`persona.md：${prefix.length} 字`);
-        for (const marker of ['W 我是', 'P 要什么', 'A 给谁', 'C 约束', '四轮', 'S1.5', '文件类', '只有正文', '自检 11 条', '语料路由', '加载 wpac 技能', 'AI 味红线', '中文AI味清单', 'preflight', '去金句', 'C1 形式', '继续补充', '人话测试', '反作文腔', '管线', '口语化', '废话', '姜涛']) {
+        for (const marker of ['W 我是', 'P 要什么', 'A 给谁', 'C 约束', '四轮', 'S1.5', '文件类', 'F2.5', '只有正文', '自检 11 条', '语料路由', '加载 wpac 技能', 'AI 味红线', '中文AI味清单', 'preflight', '去金句', 'C1 形式', '继续补充', '人话测试', '反作文腔', '管线', '口语化', '废话', '姜涛']) {
           if (!prefix.includes(marker)) bad(`persona.md 缺少段落标记：${marker}`);
         }
       }
