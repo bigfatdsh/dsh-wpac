@@ -78,13 +78,29 @@
 | 汇总表 | 分组维度 + 指标 + 公式说明 |
 | 说明页/README | 每列含义、数据来源、更新日期 |
 
+## 3.5 F2.5：页面预览（弹窗里显示的就是它）
+
+结构确认弹窗选中某个模块时，右侧先显示**这一页的截图**，再下面是文字。所以 F3 之前要先把每块渲染成图：
+
+| 交付物 | 怎么出图 | 取哪张 |
+| --- | --- | --- |
+| PPT | 先用 `office_write` / univer 出草稿 pptx → `office_render` 导出每页 PNG | 每块对应那一页 |
+| Word / PDF | 出草稿 docx → `office_convert` 转 PDF → `office_render` 出每页 PNG | 这一节的起始页（一节跨多页时用首页，文字里说明跨几页） |
+| Excel / CSV | `office_render` 指定 sheet + A1 范围出图 | 这一张表/这个区域 |
+| 图片/资料页 | 直接复用已有 PNG | 对应页 |
+
+- 图片放 `/tmp/wpac-preview/`（或工作区）下，文件名带序号，例如 `/tmp/wpac-preview/s03.png`；
+- 把**绝对路径**写进模块的 `preview` 字段；`text` 仍然要写（图看不清时看文字）；
+- 出不了图（比如模型没有渲染工具）就留空，弹窗回退到文字，并在交付说明里写一句「本页无预览图」。
+- 预览图只给结构确认用，不进正式交付物。
+
 ## 4. F3：结构确认
 
 调 `wpac_structure_review`：
 
 ```json
 { "title": "微积分（上册）复习讲义", "kind": "PDF 讲义", "format": "pdf",
-  "modules": [ { "id": "m1", "title": "第一章 函数与极限", "role": "主体", "summary": "把极限定义翻成大白话", "text": "本章 11 节……" } ] }
+  "modules": [ { "id": "m1", "title": "第一章 函数与极限", "role": "主体", "summary": "把极限定义翻成大白话", "text": "本章 11 节……", "preview": "/tmp/wpac-preview/s01.png" } ] }
 ```
 
 确认一轮就够：用户写意见 → 按 moduleId 改对应块 → 直接生成文件，**不再弹第二轮**。
