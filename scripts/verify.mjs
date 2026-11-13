@@ -148,7 +148,7 @@ if (patch) {
         else if (!review.includes('FORMATS') || !review.includes('inferFormat')) bad('review.js 缺少交付物格式（prose/slides/document/table）适配');
         else ok('结构确认实现：review.js 的 broker/端点/工具分层齐全');
         const clientSrc = read('lib/client.js');
-        if (!clientSrc.includes('FORMAT_META')) bad('client.js 缺少 FORMAT_META（PPT/Word/表格的弹窗文案不匹配）');
+        if (!clientSrc.includes('FALLBACK_META') || !clientSrc.includes('review.display')) bad('client.js 没有用宿主下发的 display（格式文案唯一真源在 formats.js）');
         if (!clientSrc.includes('color-mix')) bad('client.js 的底色没有跟主题走（应 color-mix 前景色做淡淡的分区）');
         if (!clientSrc.includes('gridTemplateRows')) bad('左栏没用 grid 固定行（上下会互相挤/遮挡）');
         if (!clientSrc.includes('lastConfirmedSignature')) bad('client.js 缺少同内容去重（模型多调一次会再弹一遍）');
@@ -159,12 +159,15 @@ if (patch) {
         if (/#[0-9a-fA-F]{6}\b|#fff\b/.test(withoutFallbacks)) bad('client.js 出现硬编码颜色（必须走 --dsw-alias-* 令牌）');
       }
       if (!read('lib/tools.js').includes("from './review.js'")) bad('lib/tools.js 应引入 ./review.js');
+      if (!fs.existsSync(path.join(root, 'skills', 'wpac', 'references', '文件类-WPAC.md'))) {
+        bad('缺少 references/文件类-WPAC.md（PDF/PPT/Word/表格的流程细则）');
+      } else ok('文件类参考：references/文件类-WPAC.md');
       if (!fs.existsSync(path.join(root, 'persona.md'))) bad('缺少 persona.md');
       else {
         const prefix = read('persona.md');
         if (prefix.length < 800) bad('persona.md 太短，四要素与流程写不全');
         else ok(`persona.md：${prefix.length} 字`);
-        for (const marker of ['W 我是', 'P 要什么', 'A 给谁', 'C 约束', '四轮', '只有正文', '自检 10 条', '语料路由', '加载 wpac 技能', 'AI 味红线', '中文AI味清单', 'preflight', '去金句', 'C1 形式', '继续补充', '人话测试', '反作文腔', '管线', '口语化', '废话', '姜涛']) {
+        for (const marker of ['W 我是', 'P 要什么', 'A 给谁', 'C 约束', '四轮', 'S1.5', '文件类', '只有正文', '自检 11 条', '语料路由', '加载 wpac 技能', 'AI 味红线', '中文AI味清单', 'preflight', '去金句', 'C1 形式', '继续补充', '人话测试', '反作文腔', '管线', '口语化', '废话', '姜涛']) {
           if (!prefix.includes(marker)) bad(`persona.md 缺少段落标记：${marker}`);
         }
       }
