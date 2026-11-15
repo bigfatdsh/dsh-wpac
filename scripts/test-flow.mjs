@@ -104,6 +104,11 @@ const fakeReact = {
   Fragment: 'Fragment',
   useState: () => [0, () => {}],
   useEffect: () => {},
+  createContext: (value) => ({ _value: value, Provider: (props) => props.children }),
+  useContext: (ctx) => (ctx && ctx._value),
+  useMemo: (fn) => fn(),
+  useRef: (value) => ({ current: value }),
+  useCallback: (fn) => fn,
 }
 await import(pathToFileURL(path.join(root, 'lib/client.js')).href)
 const plugin = decl.factory((name) => {
