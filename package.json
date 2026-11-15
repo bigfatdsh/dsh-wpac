@@ -1,6 +1,6 @@
 {
   "name": "dsh-wpac",
-  "version": "0.7.3",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "description": "WPAC agent preset: W(我是) / P(要什么) / A(给谁) / C(约束) prompt engineering for DSH. Author: 姜涛.",
@@ -42,9 +42,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/bigfatdsh/dsh-wpac.git"
+    "url": "git+https://github.com/bigfatdsh/dsh-user-backup.git",
+    "directory": "plugins/dsh-wpac"
   },
-  "homepage": "https://github.com/bigfatdsh/dsh-wpac",
+  "homepage": "https://github.com/bigfatdsh/dsh-user-backup/tree/main/plugins/dsh-wpac",
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
