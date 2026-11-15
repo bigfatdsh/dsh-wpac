@@ -53,11 +53,51 @@ function readAsarFile(archive, wanted) {
   }
 }
 
+/** 可能装着 @deepseek-ai/dsh-web-app 的目录：当前 profile + 引擎根。
+ *
+ * 桌面版把包装在 profile 的 node_modules 里；iOS / Web 版把引擎放在 App 的
+ * nodejs-project 下，profile 里只有注入的本地插件，所以要把引擎根也找出来。
+ */
+function pluginRoots() {
+  const out = [];
+  const add = (dir) => {
+    if (!dir) return;
+    const abs = path.resolve(dir);
+    if (!out.includes(abs)) out.push(abs);
+  };
+  const home = process.env.DSH_HOME || path.join(os.homedir(), '.dsh');
+  const profiles = path.join(home, 'profiles');
+  if (process.env.DSH_PROFILE_DIR) add(process.env.DSH_PROFILE_DIR);
+  try {
+    for (const name of fs.readdirSync(profiles)) add(path.join(profiles, name));
+  } catch { /* 没有 profiles 目录 */ }
+  add(process.env.DSH_ENGINE_ROOT);
+  // iOS 客户端：引擎在 App 的 nodejs-project 里；桌面 App：resources 里。
+  add('/opt/dsh/nodejs-project');
+  add(path.join(os.homedir(), 'nodejs-project'));
+  for (const entry of [process.argv[1], process.execPath]) {
+    if (!entry) continue;
+    let dir = path.dirname(entry);
+    for (let i = 0; i < 8; i += 1) {
+      if (fs.existsSync(path.join(dir, 'node_modules', '@deepseek-ai'))) { add(dir); break; }
+      const next = path.dirname(dir);
+      if (next === dir) break;
+      dir = next;
+    }
+  }
+  return out;
+}
+
 /** 找宿主里那份 standard.patch.yml。 */
 function locateStandard() {
   if (sourceArg) return { text: fs.readFileSync(sourceArg, 'utf8'), from: sourceArg };
   if (process.env.DSH_WEB_APP_PRESET) {
     return { text: fs.readFileSync(process.env.DSH_WEB_APP_PRESET, 'utf8'), from: process.env.DSH_WEB_APP_PRESET };
+  }
+  // 先按当前机器上真实的安装位置找：profile 与引擎根（iOS / Web 走这条）。
+  for (const dir of pluginRoots()) {
+    const candidate = path.join(dir, 'node_modules', '@deepseek-ai', 'dsh-web-app', 'presets', 'standard.patch.yml');
+    if (fs.existsSync(candidate)) return { text: fs.readFileSync(candidate, 'utf8'), from: candidate };
   }
   const home = process.env.DSH_HOME || path.join(os.homedir(), '.dsh');
   const inProfile = path.join(home, 'profiles', 'desktop', 'node_modules', '@deepseek-ai', 'dsh-web-app', 'presets', 'standard.patch.yml');
@@ -106,6 +146,35 @@ function extractStandardPlugins(text) {
   return out;
 }
 
+/**
+ * 去掉 skill-filesystem 行的 customSkillDirs 配置。
+ * host 的 standard.patch.yml 里这段是个 !!js 表达式（resolve @deepseek-ai/dsh-agent-preset），
+ * 在预设上下文里跑不通，DSH rc.3 的设置页会显示「加载失败」。wpac 的技能是实体装在
+ * ~/.dsh/skills/wpac 的，本来也不需要这段。
+ */
+function stripSkillFilesystemConfig(text) {
+  const lines = text.split('\n');
+  const out = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const hit = line.match(/^(\s*)- id: skill-filesystem\s*$/);
+    if (!hit) { out.push(line); continue; }
+    const base = hit[1].length;
+    out.push(line);
+    let dropping = false;      // 进入 config 块后一直丢，直到缩进回到 base
+    for (i += 1; i < lines.length; i += 1) {
+      const cur = lines[i];
+      const indent = cur.match(/^\s*/)[0].length;
+      if (cur.trim() === '') { out.push(cur); continue; }
+      if (indent <= base) { i -= 1; break; }
+      if (/^\s*config:\s*$/.test(cur)) { dropping = true; continue; }
+      if (dropping) continue;
+      out.push(cur);
+    }
+  }
+  return out.join('\n');
+}
+
 /** 取本包 patch 里 preset-wpac 的 plugins 块（相对缩进）。 */
 function extractOurs(text) {
   const lines = text.split('\n');
@@ -143,7 +212,8 @@ const indent = ' '.repeat(ours.childIndent);
 const mergedText = merged.map((l) => (l.trim() === '' ? '' : indent + l)).join('\n');
 
 const currentText = ours.body.join('\n');
-const same = currentText.trim() === mergedText.trim();
+const cleanedText = stripSkillFilesystemConfig(mergedText);
+const same = currentText.trim() === cleanedText.trim();
 
 console.log(`宿主来源：${found.from}`);
 console.log(`standard 工具行：${standardPlugins.length} 行（已剔除 persona）`);
@@ -166,6 +236,6 @@ if (!WRITE) {
 }
 
 const lines = fs.readFileSync(PATCH, 'utf8').split('\n');
-const rebuilt = [...lines.slice(0, ours.start + 1), mergedText, ...lines.slice(ours.end)];
+const rebuilt = [...lines.slice(0, ours.start + 1), cleanedText, ...lines.slice(ours.end)];
 fs.writeFileSync(PATCH, rebuilt.join('\n'));
 console.log('\n✓ 已写入 cordis.patch.yml；重装预设后生效（unmanaged，需重启 App）。');
