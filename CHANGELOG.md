@@ -1,5 +1,25 @@
 # 更新记录
 
+## 0.7.3 — 2026-11-14（修「设置里显示加载失败」+ 手机端弹窗适配）
+
+真机定位到两处「预设挂不上」，任意一处都会让设置里那张卡直接显示「加载失败」：
+
+- **死引用**：预设 `plugins` 里还留着 `@deepseek-ai/dsh-tool-office`，当前 DSH 没有这个包，
+  import 失败 → 整棵预设挂不上。按宿主自带 `standard` 重新同步工具面
+  （`scripts/adapt-tools.mjs --write`），128 行 → 120 行，`interrupt: false` 这种宿主不认的
+  配置也一并清掉（该插件本来就不读 config）。
+- **`!!js` 路径炸在 profile 外**：`skill-filesystem` 的 `customSkillDirs` 用
+  `createRequire(baseUrl).resolve('@deepseek-ai/dsh-agent-preset/package.json')` 指到引擎包，
+  iOS / Web 的 profile 里没有 `@deepseek-ai/*`，插值阶段抛 MODULE_NOT_FOUND。
+  按 `install-skill.mjs` 本来的设计改回纯静态声明，技能实体装到 `~/.dsh/skills/wpac`。
+- **脚本适配**：`adapt-tools.mjs` / `verify.mjs` 不再写死 `profiles/desktop`，自动认出
+  `profiles/web`（iOS 客户端）并从引擎根解析 `dsh-web-app`；verify 新增一条
+  「插件行引用的包能不能解析」检查——这类「加载失败」以后装之前就能发现。
+- **手机端弹窗**：窄屏（≤720px）把「380px 左栏 + 右侧详情」的横排改成上下两段，面板铺满
+  可视区、高度按 `visualViewport` 钉住（软键盘弹出不把确认键顶出屏），详情自成一列滚动；
+  预览图上限按视口高度算、`object-fit: contain` 完整显示整页；补 safe-area 内边距、
+  44px 以上触控区和 16px 输入字号（避免 iOS 聚焦放大）。
+
 ## 0.7.2 — 2026-11-13（修「预览图加载失败」：模型抄错附件路径）
 
 真机日志证据：`preview miss: …/objects/65/e145fdc8… ENOENT`，而真实文件是

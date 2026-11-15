@@ -33,8 +33,10 @@ dsh-wpac/
 ├── persona.md             # 人格段正文（唯一真源）
 ├── skills/wpac/SKILL.md   # 深度手册（判定表/选项库/约束清单/模板/例句/产出前清单）
 ├── templates/profile.md   # 长期设定模板（可选，复制到工作区 wpac/profile.md）
-├── scripts/verify.mjs     # 装前自检
+├── scripts/verify.mjs     # 装前自检（含「插件包能不能解析」「手机端弹窗渲染」）
 ├── scripts/install-skill.mjs  # 把 skills/wpac 装进 ~/.dsh/skills/wpac
+├── scripts/adapt-tools.mjs    # 按宿主 standard 同步工具面（升级 DSH 后先跑）
+├── scripts/test-mobile.mjs    # 手机端弹窗渲染断言（假 React 真渲染 client.js）
 ├── scripts/publish-github.mjs # 推到 GitHub
 ├── tests/behavior.md      # 行为回归场景（改人格段后照着跑）
 ├── CHANGELOG.md           # 版本与改动
@@ -90,6 +92,7 @@ cordis.patch.yml（预设 wpac）
 
 - **两半边**：宿主 `lib/review.js`（pending 队列 + `/dsh-wpac-review` 端点 + 工具）；浏览器 `lib/client.js`（轮询端点 → 弹窗 → POST 决定）。客户端靠 profile Loader 里那行 `name: 'dsh-wpac'`（`cordis.patch.yml` 的 `wpac-client`）被 DSH 扫到，少了它弹窗永远不出来、工具只会返回 `no-client`。
 - **弹窗**：顶部一条引导（① 点模块看正文 ② 写意见 ③ 点蓝色确认）；左侧 380px 用 grid 固定四行（步骤标签 / 模块列表 / 意见编辑 / 确认栏），窗口再矮也不会互相挤；右侧默认结构总览，点左侧模块切成该模块详情（标题 / 作用 / 摘要 / 正文 `text` / 待改意见）。
+- **手机端**：宽度 ≤720px 自动换成竖排——列表与意见编辑在上、详情在下，面板铺满可视区；高度按 `visualViewport` 钉住，软键盘弹出也不会把确认键顶出屏；预览图上限按视口算、`object-fit: contain` 保证整页不被裁切，并补了 safe-area 内边距与 16px 输入字号。改完弹窗跑 `node scripts/test-mobile.mjs`（假 React 真渲染 client.js）验证。
 - **只有一个确认键**：没有 ×、也没有取消；不写意见直接确认就是交付。同一份结构再送进来（模型多调一次）会被客户端按指纹静默确认，不会再弹第二遍。
 - **按交付物适配**：`format` = `prose`（文字稿按段）/ `slides`（PPT 按页）/ `document`（Word 按节）/ `table`（表格按区域）；不传按 `kind` 猜。每块 `text` 必填，缺了宿主直接打回 `reason=missing-text`，不开弹窗。
 - **一轮确认**：按 feedback 改完、跑 preflight 直接交付，不再弹第二轮（除非用户明确要求复看）；`cancel` / `timeout` / `no-client` / `superseded` 一律不许交付。宿主是单槽队列：新的一条进来，旧的自动作废，不会出现「确认完又冒出一个旧弹窗」。
