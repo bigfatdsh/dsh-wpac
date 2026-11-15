@@ -1,14 +1,34 @@
+## 0.8.0 — 2026-11-15（合并 0.7.3 手机端适配 + 修正并发覆盖）
+
+- 采用 0.7.3（另一会话 11:01 推送）的手机端实现：`useViewport`（窄屏 + 高度）驱动 `layoutStyles`，
+  测试见 `scripts/test-mobile.mjs`（用假 React 真渲染 client.js，断言窄屏铺满/竖排/预览限高，桌面不被改坏），
+  verify 第 9 段自动跑它；`cordis.patch.yml` 去掉 `skill-filesystem.customSkillDirs`（rc.3 下设置页「加载失败」的根因）；
+  `publish-github.mjs` token 顺序改为 环境变量 → `--token-file`（默认 `~/.dsh/github-token`）→ 钥匙串，不再弹密码框。
+- 本轮我先把自写的移动端实现推到了同一分支（11:10），覆盖了 0.7.3 的四个文件；现已按 0.7.3 恢复并合并，
+  版本从 0.7.2 直接记为 0.8.0（0.7.3 的内容全部保留）。以后同一仓库只留一个会话改。
+- 校验：verify（含 test-mobile）、smoke、两半边契约、全链路四套全过；`adapt-tools --check` 与 rc.3 standard 一致。
+
 # 更新记录
 
-## 0.8.0 — 2026-11-15（适配 DSH 0.2.2-rc.3 手机端窄屏）
+## 0.7.3 — 2026-11-14（修「设置里显示加载失败」+ 手机端弹窗适配）
 
-- 弹窗加窄屏布局（`matchMedia('(max-width: 760px)')`，监听变化实时切换，不需要刷新）：
-  全屏面板（去圆角外边距）、单栏——顶部横向模块条 → 中间结构/详情（含页面预览图）→ 底部意见输入 + 蓝色确认键；
-  引导条换短句、隐藏任务类型标签、标题省略、预览图限高 38vh、编辑框压缩到 58px。
-- 桌面宽屏布局保持不变（左 380px 编辑栏 + 右结构详情/预览）。
-- 检测：DSH 0.2.2-rc.3 下 `adapt-tools --check` 工具面一致（standard 123 行）、`verify`/`smoke`/契约/全链路四套全过；
-  运行中进程的 `/dsh-wpac-review` 与 `/dsh-wpac-preview` 都返回 200，客户端在页面里轮询、弹窗槽位已注册。
-- verify 增加窄屏适配检查（useNarrow/matchMedia/单栏布局），防止以后改动把手机端布局删掉。
+真机定位到两处「预设挂不上」，任意一处都会让设置里那张卡直接显示「加载失败」：
+
+- **死引用**：预设 `plugins` 里还留着 `@deepseek-ai/dsh-tool-office`，当前 DSH 没有这个包，
+  import 失败 → 整棵预设挂不上。按宿主自带 `standard` 重新同步工具面
+  （`scripts/adapt-tools.mjs --write`），128 行 → 120 行，`interrupt: false` 这种宿主不认的
+  配置也一并清掉（该插件本来就不读 config）。
+- **`!!js` 路径炸在 profile 外**：`skill-filesystem` 的 `customSkillDirs` 用
+  `createRequire(baseUrl).resolve('@deepseek-ai/dsh-agent-preset/package.json')` 指到引擎包，
+  iOS / Web 的 profile 里没有 `@deepseek-ai/*`，插值阶段抛 MODULE_NOT_FOUND。
+  按 `install-skill.mjs` 本来的设计改回纯静态声明，技能实体装到 `~/.dsh/skills/wpac`。
+- **脚本适配**：`adapt-tools.mjs` / `verify.mjs` 不再写死 `profiles/desktop`，自动认出
+  `profiles/web`（iOS 客户端）并从引擎根解析 `dsh-web-app`；verify 新增一条
+  「插件行引用的包能不能解析」检查——这类「加载失败」以后装之前就能发现。
+- **手机端弹窗**：窄屏（≤720px）把「380px 左栏 + 右侧详情」的横排改成上下两段，面板铺满
+  可视区、高度按 `visualViewport` 钉住（软键盘弹出不把确认键顶出屏），详情自成一列滚动；
+  预览图上限按视口高度算、`object-fit: contain` 完整显示整页；补 safe-area 内边距、
+  44px 以上触控区和 16px 输入字号（避免 iOS 聚焦放大）。
 
 ## 0.7.2 — 2026-11-13（修「预览图加载失败」：模型抄错附件路径）
 
