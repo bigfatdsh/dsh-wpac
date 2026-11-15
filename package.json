@@ -42,10 +42,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bigfatdsh/dsh-user-backup.git",
-    "directory": "plugins/dsh-wpac"
+    "url": "https://github.com/bigfatdsh/dsh-wpac.git"
   },
-  "homepage": "https://github.com/bigfatdsh/dsh-user-backup/tree/main/plugins/dsh-wpac",
+  "homepage": "https://github.com/bigfatdsh/dsh-wpac",
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
