@@ -11,7 +11,88 @@ import os from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const profileDir = process.env.DSH_PROFILE_DIR || path.join(process.env.DSH_HOME || '', 'profiles', 'desktop');
+// profile 不一定是 desktop：iOS / Web 客户端上是 web。按 DSH_PROFILE_DIR →
+// DSH_PROFILE → 实际存在 cordis.yml 的 profiles/* 依次挑，别再写死 desktop。
+function detectProfileDir() {
+  if (process.env.DSH_PROFILE_DIR) return process.env.DSH_PROFILE_DIR;
+  const home = process.env.DSH_HOME || path.join(os.homedir(), '.dsh');
+  const profiles = path.join(home, 'profiles');
+  const ordered = [];
+  for (const name of [process.env.DSH_PROFILE, 'desktop', 'web']) {
+    if (name) ordered.push(path.join(profiles, name));
+  }
+  try {
+    for (const name of fs.readdirSync(profiles)) ordered.push(path.join(profiles, name));
+  } catch { /* 没有 profiles 目录 */ }
+  for (const dir of ordered) {
+    if (fs.existsSync(path.join(dir, 'cordis.yml'))) return dir;
+  }
+  return path.join(profiles, 'desktop');
+}
+const profileDir = detectProfileDir();
+
+/** 引擎根：iOS 上 @deepseek-ai/* 装在 App 的 nodejs-project 里，profile 里没有。 */
+function detectEngineRoots() {
+  const roots = [];
+  const add = (dir) => {
+    if (!dir) return;
+    const abs = path.resolve(dir);
+    if (!roots.includes(abs)) roots.push(abs);
+  };
+  add(process.env.DSH_ENGINE_ROOT);
+  add('/opt/dsh/nodejs-project');
+  add(path.join(os.homedir(), 'nodejs-project'));
+  // DSH 桌面版：引擎在 app.asar 里（纯 node 解析不到，但 adapt-tools 能比对）。
+  const installDir = process.env.DSH_INSTALL_DIR || '';
+  if (installDir.includes('.asar')) add(installDir.slice(0, installDir.indexOf('.asar') + '.asar'.length) + '/dsh');
+  else if (installDir) add(installDir);
+  add('/Applications/DeepSeek Harness.app/Contents/Resources/app.asar/dsh');
+  for (const entry of [process.argv[1], process.execPath]) {
+    if (!entry) continue;
+    let dir = path.dirname(entry);
+    for (let i = 0; i < 8; i += 1) {
+      if (fs.existsSync(path.join(dir, 'node_modules', '@deepseek-ai'))) { add(dir); break; }
+      const next = path.dirname(dir);
+      if (next === dir) break;
+      dir = next;
+    }
+  }
+  return roots;
+}
+const engineRoots = detectEngineRoots();
+
+/** 插件行 name → 包名（`@scope/pkg/sub` → `@scope/pkg`，相对路径 / cordis: 不算包）。 */
+function packageOf(spec) {
+  if (typeof spec !== 'string' || !spec) return '';
+  if (spec.startsWith('.') || spec.startsWith('cordis:')) return '';
+  return spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0];
+}
+
+/** 这个包在当前机器上能不能解析到（profile 或引擎根，任一即可）。 */
+function resolvablePackage(name) {
+  if (!name) return true;
+  if (name === 'dsh-wpac') return true;
+  // profile 里的包（npm 装的 / link 的）用普通 node 就能解析。
+  try {
+    createRequire(path.join(profileDir, 'package.json')).resolve(name + '/package.json');
+    return true;
+  } catch { /* 继续 */ }
+  const diskRoots = engineRoots.filter((dir) => !dir.includes('.asar'));
+  for (const dir of diskRoots) {
+    try {
+      createRequire(path.join(dir, 'package.json')).resolve(name + '/package.json');
+      return true;
+    } catch { /* 换下一个入口 */ }
+  }
+  // 引擎根在 app.asar 里时，普通 node 的 require 解析不到（Electron 内部才可以）。
+  // 这些行是否有效交给 adapt-tools 的「与宿主 standard 一致」检查兜底，这里不误报。
+  if (engineRoots.some((dir) => dir.includes('.asar'))) {
+    asarSkipped = true;
+    return true;
+  }
+  return false;
+}
+let asarSkipped = false;
 const failures = [];
 const checks = [];
 const ok = (msg) => checks.push(`  ✓ ${msg}`);
@@ -47,11 +128,7 @@ function adapt(mod) {
   return { parse: (text) => mod.load(text, { schema }) };
 }
 function loadYaml() {
-  const homes = [
-    '',
-    process.env.DSH_PROFILE_DIR || '',
-    path.join(process.env.DSH_HOME || '', 'profiles', 'desktop'),
-  ];
+  const homes = ['', process.env.DSH_PROFILE_DIR || '', profileDir, ...engineRoots];
   const candidates = [];
   for (const home of homes) {
     for (const pkg of ['yaml', 'js-yaml']) {
@@ -98,6 +175,27 @@ if (patch) {
       const cfg = row.config || {};
       if (cfg.id !== 'wpac') bad('config.id 必须是 wpac');
       else ok('config.id：wpac');
+
+      // 预设里每个启用中的插件行都必须真的装得上。少一个包（宿主升级后删掉的、
+      // 或本机没装的）整棵预设就挂不上，设置里只显示「加载失败」，看不出原因。
+      const pluginRows = [];
+      const collectRows = (rows) => {
+        for (const item of rows || []) {
+          if (!item || typeof item !== 'object') continue;
+          if (typeof item.name === 'string') pluginRows.push(item);
+          if (Array.isArray(item.config)) collectRows(item.config);
+        }
+      };
+      collectRows(cfg.plugins);
+      const missing = [];
+      for (const item of pluginRows) {
+        if (item.disabled === true) continue; // 禁用行不会被 import，缺包也无害
+        const name = packageOf(item.name);
+        if (!name || resolvablePackage(name)) continue;
+        missing.push(`${item.id || '?'} → ${name}`);
+      }
+      if (missing.length) bad(`这些插件包在当前 DSH 里解析不到（设置里会显示「加载失败」）：${missing.join('、')}`);
+      else ok(`预设 ${pluginRows.length} 个插件行引用的包都能解析` + (asarSkipped ? '（引擎包在 app.asar 内，按 adapt-tools 一致性兜底）' : ''));
       if (!Number.isFinite(cfg.order)) bad('config.order 必须是数字');
       else ok(`config.order：${cfg.order}`);
       if (!cfg.name) bad('缺少显示名 config.name');
@@ -404,6 +502,15 @@ try {
   else ok(`Loader 锚点行：name: '${pkgNow.name}'`);
 } catch (error) {
   bad(`检查浏览器半边失败：${error.message}`);
+}
+
+// ---- 9. 手机端弹窗：窄屏铺满 / 竖排 / 预览按视口限高 ----------------------
+try {
+  execFileSync(process.execPath, [path.join(root, 'scripts', 'test-mobile.mjs')], { stdio: 'pipe' });
+  ok('手机端弹窗渲染：铺满、竖排、预览按视口限高，桌面样式不变');
+} catch (error) {
+  const detail = `${error.stdout || ''}${error.stderr || ''}`.trim().split('\n').slice(-2).join(' / ');
+  bad(`手机端弹窗渲染断言失败：${detail || error.message}`);
 }
 
 console.log(`dsh-wpac 自检（${root}）`);
