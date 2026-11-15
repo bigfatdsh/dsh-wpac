@@ -5,16 +5,16 @@
 //   node scripts/publish-github.mjs --dry-run   # 只看会推哪些文件
 //   node scripts/publish-github.mjs             # 推送到 bigfatdsh/dsh-wpac
 //
-// 环境变量：REPO（默认 bigfatdsh/dsh-wpac）、BRANCH（默认 main）、GITHUB_TOKEN / GH_TOKEN。
-// token 依次取：环境变量 → --token-file（默认 ~/.dsh/github-token）→ macOS 钥匙串。
+// 环境变量：REPO（默认 bigfatdsh/dsh-wpac）、BRANCH（默认 main）。
+// token 从 macOS 钥匙串取（`security find-internet-password -s github.com -w`），不落文件。
 //
 // 只推有变化的文件：先取远端文件 sha 比对，一样就跳过，重复跑不会制造空提交。
 
 import { createHash } from 'node:crypto';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -23,33 +23,18 @@ const BRANCH = process.env.BRANCH ?? 'main';
 const API = 'https://api.github.com';
 const DRY = process.argv.includes('--dry-run');
 
-// token 来源（按顺序找，找到就用）：
-//   1. 环境变量 GITHUB_TOKEN / GH_TOKEN —— iOS / 服务器上最省事；
-//   2. --token-file <path>（默认 ~/.dsh/github-token）——不想让 token 进 shell 历史时用它；
-//   3. macOS 钥匙串（老路径，桌面版继续能用）。
-function readTokenFile() {
-  const i = process.argv.indexOf('--token-file');
-  const file = i !== -1 ? process.argv[i + 1] : path.join(os.homedir(), '.dsh', 'github-token');
-  if (!file || !fs.existsSync(file)) return '';
-  return fs.readFileSync(file, 'utf8').replace(/\s+$/, '');
-}
-
 const TOKEN = (() => {
-  const fromEnv = (process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '').trim();
-  if (fromEnv) return fromEnv;
-  const fromFile = readTokenFile().trim();
-  if (fromFile) return fromFile;
+  // 先读本地凭据文件（不弹钥匙串密码框）；没有才去钥匙串拿。
   try {
-    return execSync('security find-internet-password -s github.com -w', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-  } catch {
-    console.error([
-      '取不到 GitHub token。三选一：',
-      '  · 环境变量：GITHUB_TOKEN=github_pat_xxx node scripts/publish-github.mjs',
-      '  · 文件：把 token 写进 ~/.dsh/github-token（chmod 600），再直接跑脚本',
-      '  · 桌面版：security add-internet-password -s github.com -a <用户名> -w <token>',
-    ].join('\n'));
-    process.exit(1);
-  }
+    const fromFile = fs.readFileSync(path.join(os.homedir(), '.dsh', 'github-token'), 'utf8').trim();
+    if (fromFile) return fromFile;
+  } catch { /* 没有文件 */ }
+  try {
+    const fromKeychain = execSync('security find-internet-password -s github.com -w', { encoding: 'utf8' }).trim();
+    if (fromKeychain) return fromKeychain;
+  } catch { /* 钥匙串也没有 */ }
+  console.error('取不到 GitHub token（~/.dsh/github-token 和钥匙串都没有）。');
+  process.exit(1);
 })();
 
 const headers = {
@@ -68,8 +53,7 @@ function collect() {
     const stat = fs.statSync(abs);
     if (stat.isDirectory()) {
       for (const name of fs.readdirSync(abs)) {
-        // ._* 是 macOS 的资源分叉影子文件，别推到仓库里。
-        if (name === 'node_modules' || name === '.DS_Store' || name.startsWith('._')) continue;
+        if (name === 'node_modules' || name === '.DS_Store') continue;
         walk(path.join(rel, name));
       }
     } else {
