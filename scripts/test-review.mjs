@@ -46,7 +46,7 @@ console.log('浏览器半边（lib/client.js）');
     eq(decl.id, 'dsh-wpac', '客户端模块 id');
 
     const fakeReact = {
-      createElement: () => null,
+      createElement: () => null, createContext: (value) => ({ _value: value, Provider: (props) => props.children }), useContext: (ctx) => (ctx && ctx._value), useMemo: (fn) => fn(), useRef: (value) => ({ current: value }), useCallback: (fn) => fn,
       Fragment: 'Fragment',
       useState: () => [0, () => {}],
       useEffect: () => {},
