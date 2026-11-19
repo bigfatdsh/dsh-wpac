@@ -72,7 +72,7 @@ function pluginRoots() {
     for (const name of fs.readdirSync(profiles)) add(path.join(profiles, name));
   } catch { /* 没有 profiles 目录 */ }
   add(process.env.DSH_ENGINE_ROOT);
-  // iOS 客户端：引擎在 App 的 nodejs-project 里；桌面 App：resources 里。
+  // iOS 客户端在 nodejs-project 里，桌面 App 在 resources 里。
   add('/opt/dsh/nodejs-project');
   add(path.join(os.homedir(), 'nodejs-project'));
   for (const entry of [process.argv[1], process.execPath]) {
@@ -85,6 +85,8 @@ function pluginRoots() {
       dir = next;
     }
   }
+  // dsh-go 的引擎在 /opt/dsh。放在最后，桌面版优先。
+  add('/opt/dsh');
   return out;
 }
 
