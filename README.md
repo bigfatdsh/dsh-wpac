@@ -111,6 +111,22 @@ plugin_manager  action=install_bundle  target=<本目录的绝对路径>   # 例
 
 装完在新建会话的预设列表里选「wpac模式」。
 
+### dsh-go / Android（手机 App）
+
+```bash
+dsh plugin --profile web add /path/to/dsh-wpac   # 目录用绝对路径，装的是 link
+node scripts/install-skill.mjs                   # 技能实体装到 ~/.dsh/skills/wpac
+```
+
+装完在 App 的「引擎」页重启一次引擎，新建会话的预设列表里选「wpac模式」。
+自检用 profile 的绝对路径跑：
+
+```bash
+DSH_PROFILE_DIR=~/.dsh/profiles/web node scripts/verify.mjs
+```
+
+dsh-go 的引擎在 `/opt/dsh`，0.8.4 起自检会自动认这个位置。
+
 ## 长期设定（可选）
 
 把 `templates/profile.md` 复制到工作区 `wpac/profile.md` 并填几行（我是谁、常写什么、
