@@ -30,6 +30,13 @@ if (dry) {
 
 fs.mkdirSync(path.dirname(target), { recursive: true });
 fs.rmSync(target, { recursive: true, force: true });
-fs.cpSync(source, target, { recursive: true });
+fs.cpSync(source, target, {
+  recursive: true,
+  // macOS / 网盘同步会带出 AppleDouble 与 .DS_Store；别让它们进技能根。
+  filter: (file) => {
+    const name = path.basename(file);
+    return !name.startsWith('._') && name !== '.DS_Store';
+  },
+});
 const size = fs.statSync(path.join(target, 'SKILL.md')).size;
 console.log(`已安装技能：${target}（SKILL.md ${size} 字节）`);
