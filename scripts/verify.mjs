@@ -40,7 +40,6 @@ function detectEngineRoots() {
     if (!roots.includes(abs)) roots.push(abs);
   };
   add(process.env.DSH_ENGINE_ROOT);
-  add('/opt/dsh/nodejs-project');
   add(path.join(os.homedir(), 'nodejs-project'));
   // DSH 桌面版：引擎在 app.asar 里（纯 node 解析不到，但 adapt-tools 能比对）。
   const installDir = process.env.DSH_INSTALL_DIR || '';
@@ -57,6 +56,10 @@ function detectEngineRoots() {
       dir = next;
     }
   }
+  // dsh-go（Android / Linux 原生运行时）的引擎在 /opt/dsh。放在最后：
+  // 同一台机器同时装了桌面版与 dsh-go 时，先用桌面版真实引擎根，避免比错 standard。
+  add('/opt/dsh');
+  add('/opt/dsh/nodejs-project');
   return roots;
 }
 const engineRoots = detectEngineRoots();
@@ -514,6 +517,7 @@ try {
 }
 
 console.log(`dsh-wpac 自检（${root}）`);
+console.log(`引擎根：${engineRoots.length ? engineRoots.join(' / ') : '（没找到）'}`);
 console.log(checks.join('\n'));
 if (failures.length) {
   console.error(`\n失败 ${failures.length} 项`);
