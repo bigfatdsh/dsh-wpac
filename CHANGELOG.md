@@ -1,3 +1,15 @@
+## 0.8.4 — 2026-11-19（dsh-go / Android 适配）
+
+- **自检认 dsh-go 的引擎根**：`verify.mjs` 与 `adapt-tools.mjs` 原来只找桌面版
+  （`app.asar`、`nodejs-project`）和 iOS 的位置，Android 的 `/opt/dsh` 不在名单里。
+  结果自检报「找不到 yaml 包」「没有 dsh-wpac 的 Loader 行」两条假失败，更关键的是
+  「工具面是否与宿主 standard 一致」永远跳过——DSH 升级后预设可能悄悄加载失败。
+  现在 `/opt/dsh` 也在引擎根里（排在候选最后，桌面版优先），自检能解析自己的 patch、能真比对 standard。
+- **技能安装跳过 macOS 垃圾**：`install-skill.mjs` 复制 `skills/wpac` 时过滤
+  `._*` / `.DS_Store`，不再把 AppleDouble 文件带进 `~/.dsh/skills`。
+- **自检输出引擎根**：失败时能直接看到它是在哪个引擎根里找的，换设备不用猜。
+- 文档补 dsh-go 安装步骤（`dsh plugin --profile web add`）。
+
 ## 0.8.3 — 2026-11-15（合并 0.8.2 的「移除去 AI 味机制」+ 本机 rc.3 工具面）
 
 - 采用 0.8.2 的文本类精简：persona 删 AI 味红线 / 语料路由 / 废话占比 / 去金句 pass（自检 11→8 条）、
