@@ -46,7 +46,7 @@ console.log('浏览器半边（lib/client.js）');
     eq(decl.id, 'dsh-wpac', '客户端模块 id');
 
     const fakeReact = {
-      createElement: () => null, createContext: (value) => ({ _value: value, Provider: (props) => props.children }), useContext: (ctx) => (ctx && ctx._value), useMemo: (fn) => fn(), useRef: (value) => ({ current: value }), useCallback: (fn) => fn,
+      createElement: () => null, memo: (Component) => Component, useCallback: (fn) => fn, useRef: (value) => ({ current: value }), createContext: (value) => ({ _value: value, Provider: (props) => props.children }), useContext: (ctx) => (ctx && ctx._value), useMemo: (fn) => fn(), useRef: (value) => ({ current: value }), useCallback: (fn) => fn,
       Fragment: 'Fragment',
       useState: () => [0, () => {}],
       useEffect: () => {},
@@ -226,15 +226,22 @@ console.log('宿主半边（lib/review.js: 端点 + 工具）');
 
   const post = await callEndpoint('POST', {
     id: got.body.review.id, action: 'confirm',
-    feedback: [{ moduleId: 'm2', moduleTitle: '抓手', instruction: '这一段写具体点' }, { instruction: '' }],
+    feedback: [
+      { moduleId: 'm2', moduleTitle: '抓手', instruction: '这一段写具体点' },
+      { moduleId: '', moduleTitle: '总体意见', instruction: '结尾别升华，整体短一点' },
+      { instruction: '' },
+    ],
   });
   eq(post.status, 200, 'POST 状态');
   const result = await running;
   eq(result.ok, true, '工具返回值 ok');
   eq(result.action, 'confirm', '工具返回值 action');
-  eq(result.feedback.length, 1, '空意见被丢掉后的意见条数');
+  eq(result.feedback.length, 2, '空意见被丢掉后的意见条数（含总体意见）');
   eq(result.feedback[0].moduleId, 'm2', '意见 moduleId');
   eq(result.feedback[0].instruction, '这一段写具体点', '意见正文');
+  eq(result.feedback[1].moduleId, '', '总体意见 moduleId 为空');
+  eq(result.feedback[1].moduleTitle, '总体意见', '总体意见标题');
+  eq(result.feedback[1].instruction, '结尾别升华，整体短一点', '总体意见正文');
 
   // 第二轮：cancel
   const running2 = tool.execute(Object.assign({}, args, { round: 2 }));
