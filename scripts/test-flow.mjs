@@ -100,7 +100,7 @@ globalThis.window = {
   removeEventListener() {},
 }
 const fakeReact = {
-  createElement: () => null,
+  createElement: () => null, memo: (Component) => Component, useCallback: (fn) => fn, useRef: (value) => ({ current: value }),
   Fragment: 'Fragment',
   useState: () => [0, () => {}],
   useEffect: () => {},
