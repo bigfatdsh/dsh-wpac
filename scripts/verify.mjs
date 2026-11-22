@@ -250,6 +250,8 @@ if (patch) {
         else ok('结构确认实现：review.js 的 broker/端点/工具分层齐全');
         const clientSrc = read('lib/client.js');
         if (!clientSrc.includes('FALLBACK_META') || !clientSrc.includes('review.display')) bad('client.js 没有用宿主下发的 display（格式文案唯一真源在 formats.js）');
+        if (!clientSrc.includes('总体意见') || !clientSrc.includes('overallFeedback')) bad('结构弹窗缺「总体意见」区（整篇建议要能一起提交）');
+        if (!clientSrc.includes('submitRef')) bad('弹窗快捷键/提交没有走 ref（每次渲染重挂监听，会卡）');
         if (!clientSrc.includes('color-mix')) bad('client.js 的底色没有跟主题走（应 color-mix 前景色做淡淡的分区）');
         if (!clientSrc.includes('gridTemplateRows')) bad('左栏没用 grid 固定行（上下会互相挤/遮挡）');
         if (!clientSrc.includes('lastConfirmedSignature')) bad('client.js 缺少同内容去重（模型多调一次会再弹一遍）');
@@ -268,7 +270,7 @@ if (patch) {
         const prefix = read('persona.md');
         if (prefix.length < 800) bad('persona.md 太短，四要素与流程写不全');
         else ok(`persona.md：${prefix.length} 字`);
-        for (const marker of ['W 我是', 'P 要什么', 'A 给谁', 'C 约束', '四轮', 'S1.5', '文件类', 'F2.5', '只有正文', '自检 8 条', '加载 wpac 技能', 'preflight', 'C1 形式', '继续补充', '管线', 'S6 交付', '姜涛']) {
+        for (const marker of ['W 我是', 'P 要什么', 'A 给谁', 'C 约束', '四轮', 'S1.5', '文件类', 'F2.5', '总体意见', '只有正文', '自检 8 条', '加载 wpac 技能', 'preflight', 'C1 形式', '继续补充', '管线', 'S6 交付', '姜涛']) {
           if (!prefix.includes(marker)) bad(`persona.md 缺少段落标记：${marker}`);
         }
       }
