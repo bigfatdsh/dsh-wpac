@@ -25,6 +25,10 @@ function makeReact() {
   const stateByPath = new Map();
   const currentRef = { value: null };
   const React = {
+    memo: (Component) => Component,
+    useCallback: (fn) => fn,
+    useRef: (value) => ({ current: value }),
+    useMemo: (fn) => fn(),
     Fragment: { __fragment: true },
     createElement(type, props, ...children) {
       const base = { ...(props || {}) };
